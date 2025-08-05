@@ -3,6 +3,8 @@ import yaml
 
 from typing import Dict, Optional
 
+from metricflow.configuration.constants import ENV_MF_DICT
+
 
 class YamlFileHandler:
     """Class to handle interactions with a non-nested yaml."""
@@ -20,6 +22,11 @@ class YamlFileHandler:
 
     def get_value(self, key: str) -> Optional[str]:
         """Attempts to get a corresponding value from the yaml file. Throw an error if not exists or None."""
+        #add env logic
+        if key in ENV_MF_DICT:
+            env_value = os.getenv(ENV_MF_DICT[key])
+            if env_value:
+                return env_value
         content = self._load_yaml()
         return content.get(key)
 

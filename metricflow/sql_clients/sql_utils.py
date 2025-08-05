@@ -7,6 +7,10 @@ from sqlalchemy.engine import make_url
 from metricflow.configuration.constants import (
     CONFIG_DWH_DB,
     CONFIG_DWH_DIALECT,
+    CONFIG_DWH_HOST,
+    CONFIG_DWH_PORT,
+    CONFIG_DWH_USER,
+    CONFIG_DWH_PASSWORD,
 )
 from metricflow.configuration.yaml_handler import YamlFileHandler
 from metricflow.protocols.async_sql_client import AsyncSqlClient
@@ -79,11 +83,11 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         return DuckDbSqlClient(file_path=database)
     elif dialect == SqlDialect.MYSQL.value:
         # For MySQL, we need to construct a connection URL from config components
-        host = not_empty(handler.get_value("host"), "host", url)
-        port = not_empty(handler.get_value("port"), "port", url)
-        username = not_empty(handler.get_value("username"), "username", url)
-        password = not_empty(handler.get_value("password"), "password", url)
-        database = not_empty(handler.get_value("database"), "database", url)
+        host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
+        port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
+        username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
+        password = not_empty(handler.get_value(CONFIG_DWH_PASSWORD), "password", url)
+        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
 
         # Construct MySQL URL
         mysql_url = f"mysql://{username}@{host}:{port}/{database}"

@@ -107,6 +107,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+poetry.lock
 env/
 *venv
 ENV/

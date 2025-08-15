@@ -167,13 +167,11 @@ class MySQLSqlClient(SqlAlchemySqlClient):
         system_tags: SqlRequestTagSet = SqlRequestTagSet(),
         extra_tags: SqlJsonTag = SqlJsonTag(),
     ) -> pd.DataFrame:
-        """Override to fix pandas compatibility with MySQL connections."""
-        # Use raw connection for pandas compatibility
-        raw_conn = self._engine.raw_connection()
-        try:
-            return pd.read_sql_query(stmt, raw_conn, params=bind_params.param_dict)
-        finally:
-            raw_conn.close()
+        """Override to use SQLAlchemy connection for pandas compatibility."""
+        with self._engine_connection(
+            self._engine, isolation_level=isolation_level, system_tags=system_tags, extra_tags=extra_tags
+        ) as conn:
+            return pd.read_sql_query(sqlalchemy.text(stmt), conn, params=bind_params.param_dict)
 
     def cancel_submitted_queries(self) -> None:  # noqa: D
         for request_id in self.active_requests():

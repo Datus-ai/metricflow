@@ -16,7 +16,6 @@ from halo import Halo
 from importlib.metadata import version as pkg_version
 from packaging.version import parse
 from typing import Callable, Iterator, List, Optional
-from update_checker import UpdateChecker
 
 from metricflow.cli import PACKAGE_NAME
 from metricflow.cli.constants import DEFAULT_RESULT_DECIMAL_PLACES, MAX_LIST_OBJECT_ELEMENTS
@@ -73,21 +72,6 @@ _telemetry_reporter.add_rudderstack_handler()
 @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
 def cli(cfg: CLIContext, verbose: bool) -> None:  # noqa: D
     cfg.verbose = verbose
-
-    checker = UpdateChecker()
-    result = checker.check(PACKAGE_NAME, pkg_version(PACKAGE_NAME))
-    # result is None when an update was not found or a failure occurred
-    if result:
-        click.secho(
-            "‼️ Warning: A new version of the MetricFlow CLI is available.",
-            bold=True,
-            fg="red",
-        )
-
-        click.echo(
-            f"💡 Please update to version {result.available_version}, released {result.release_date} by running:\n"
-            f"\t$ pip install --upgrade {PACKAGE_NAME}\n",
-        )
 
     # Cancel queries submitted to the DW if the user precess CTRL + c / process is terminated.
     # Note: docs unclear on the type for the 'frame' argument.

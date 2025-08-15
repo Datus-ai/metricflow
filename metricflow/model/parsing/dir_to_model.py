@@ -354,7 +354,7 @@ def parse_config_yaml(
         raise
     # Any other error should be handled as an issue
     except Exception as e:
-        context = FileContext(file_name=config_yaml.filepath)
+        context = FileContext(file_name=config_yaml.filepath, line_number=None)
         issues.append(
             ValidationError(context=context, message=str(e), extra_detail="".join(traceback.format_tb(e.__traceback__)))
         )

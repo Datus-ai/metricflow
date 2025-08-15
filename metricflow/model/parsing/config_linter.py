@@ -99,6 +99,7 @@ class ConfigLinter:  # noqa: D
                         ValidationError(
                             context=FileContext(file_name=file_name, line_number=problem.line),
                             message=problem.desc,  # type: ignore[misc]
+                            extra_detail=None,
                         )
                     )
                 else:
@@ -106,6 +107,7 @@ class ConfigLinter:  # noqa: D
                         ValidationWarning(
                             context=FileContext(file_name=file_name, line_number=problem.line),
                             message=problem.desc,  # type: ignore[misc]
+                            extra_detail=None,
                         )
                     )
 

@@ -20,6 +20,7 @@ class NonEmptyRule(ModelValidationRule):
             issues.append(
                 ValidationError(
                     message="No data sources present in the model.",
+                    extra_detail=None,
                 )
             )
         return issues
@@ -41,6 +42,7 @@ class NonEmptyRule(ModelValidationRule):
             issues.append(
                 ValidationError(
                     message="No metrics present in the model.",
+                    extra_detail=None,
                 )
             )
         return issues

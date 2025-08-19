@@ -52,9 +52,8 @@ from metricflow.telemetry.reporter import TelemetryReporter, log_call
 from metricflow.time.time_source import TimeSource
 
 logger = logging.getLogger(__name__)
-_telemetry_reporter = TelemetryReporter(report_levels_higher_or_equal_to=TelemetryLevel.USAGE)
+_telemetry_reporter = TelemetryReporter(report_levels_higher_or_equal_to=TelemetryLevel.OFF)
 _telemetry_reporter.add_python_log_handler()
-_telemetry_reporter.add_rudderstack_handler()
 
 
 @dataclass(frozen=True)

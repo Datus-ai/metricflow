@@ -1,12 +1,28 @@
 [tool.poetry]
-name = "metricflow"
-version = "0.140.0"
-description = "Translates a simple metric definition into reusable SQL and executes it against the SQL engine of your choice."
-authors = ["Transform <hello@transformdata.io>"]
+name = "datus-metricflow"
+version = "0.1.0"
+description = "Simplified MetricFlow integration for Datus Agent - One-command setup for semantic metrics"
+authors = ["Datus.ai <support@datus.ai>", "Transform <hello@transformdata.io>"]
 license = "AGPL-3.0-or-later"
 readme = "README.md"
-homepage = "https://transform.co/metricflow"
-repository = "https://github.com/transform-data/metricflow"
+homepage = "https://datus.ai"
+repository = "https://github.com/Datus-ai/metricflow"
+keywords = ["metrics", "sql", "analytics", "datus", "metricflow"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Information Analysis"
+]
+
+packages = [
+    {include = "metricflow"},
+    {include = "datus_metricflow"}
+]
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.10"
@@ -20,7 +36,7 @@ jsonschema = "3.2.0"
 SQLAlchemy = "^1.4.42"
 snowflake-sqlalchemy = "^1.4.3"
 sqlalchemy-redshift = "0.8.1"
-numpy = ">=1.22.2"
+numpy = ">=1.22.2,<2.0"
 pandas = "^1.3.0"
 Jinja2 = ">=2.11.3"
 PyYAML = "^6.0"
@@ -73,6 +89,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 mf = 'metricflow.cli.main:cli'
+datus-metricflow = 'datus_metricflow.cli:cli'
 
 [tool.black]
 line-length = 120

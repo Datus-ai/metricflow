@@ -40,11 +40,7 @@ from metricflow.time.time_granularity_solver import (
     RequestTimeGranularityException,
 )
 
-logging.captureWarnings(True)
-import fuzzywuzzy.fuzz  # noqa: E402
-import fuzzywuzzy.process  # noqa: E402
-
-logging.captureWarnings(False)
+from rapidfuzz import fuzz, process
 
 logger = logging.getLogger(__name__)
 
@@ -112,12 +108,12 @@ class MetricFlowQueryParser:
         # Rank choices by edit distance score.
         # extract() return a tuple like (name, score)
         top_ranked_suggestions = sorted(
-            fuzzywuzzy.process.extract(
+            process.extract(
                 # This scorer seems to return the best results.
                 item,
                 list(candidate_items),
                 limit=max_suggestions,
-                scorer=fuzzywuzzy.fuzz.token_set_ratio,
+                scorer=fuzz.token_set_ratio,
             ),
             # Put the highest scoring item at the top of the list.
             key=lambda x: x[1],

@@ -1,1 +1,1 @@
-PACKAGE_NAME = "datus-metricflow"
+PACKAGE_NAME = "datus-mf"

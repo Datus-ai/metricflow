@@ -8,7 +8,7 @@ using JSON-RPC protocol, similar to the MetricFlow MCP server.
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from mcp.server import Server
 from mcp import types

@@ -10,13 +10,13 @@ This repository provides a streamlined Docker setup for running MetricFlow as an
 docker build -t datus-mf .
 
 # Run MCP server
-docker run -p 8080:8080 datus-mf
+docker run -p 8080:8080 -p 8081:8081 datus-mf
 
 # Run with demo data
-docker run -p 8080:8080 datus-mf demo
+docker run -p 8080:8080 -p 8081:8081 datus-mf demo
 
 # Run with persistent storage
-docker run -p 8080:8080 \
+docker run -p 8080:8080 -p 8081:8081 \
   -v metricflow_data:/root/.metricflow \
   -v datus_data:/root/.datus \
   datus-mf
@@ -25,9 +25,13 @@ docker run -p 8080:8080 \
 
 ## Available Endpoints
 
-- **Health Check**: `GET /health`
-- **MCP JSON-RPC**: `POST /mcp`
-- **SSE Stream**: `GET /sse`
+### MetricFlow MCP Server (Port 8080)
+- **Health Check**: `GET http://localhost:8080/health`
+- **MCP JSON-RPC**: `POST http://localhost:8080/mcp`
+
+### Filesystem MCP Server (Port 8081)
+- **Health Check**: `GET http://localhost:8081/health`
+- **MCP JSON-RPC**: `POST http://localhost:8081/mcp`
 
 ## MCP Tools Available
 
@@ -92,5 +96,5 @@ docker logs mcp-metricflow
 ```bash
 # Remove volumes and restart
 docker volume rm metricflow_data datus_data
-docker run -p 8080:8080 datus-mf
+docker run -p 8080:8080 -p 8081:8081 datus-mf
 ```

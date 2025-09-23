@@ -7,7 +7,6 @@ using JSON-RPC protocol, similar to the MetricFlow MCP server.
 
 import logging
 import os
-import mimetypes
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -56,24 +55,6 @@ def _is_allowed_file(config: FilesystemConfig, file_path: Path) -> bool:
     return file_path.suffix.lower() in config.allowed_extensions
 
 
-def _get_file_info(file_path: Path) -> Dict[str, Any]:
-    """Get file information"""
-    try:
-        stat = file_path.stat()
-        mime_type, _ = mimetypes.guess_type(str(file_path))
-
-        return {
-            "name": file_path.name,
-            "path": str(file_path),
-            "size": stat.st_size,
-            "modified": stat.st_mtime,
-            "is_file": file_path.is_file(),
-            "is_directory": file_path.is_dir(),
-            "mime_type": mime_type,
-            "extension": file_path.suffix
-        }
-    except Exception as e:
-        return {"error": str(e)}
 
 
 # Define MCP tools
@@ -82,92 +63,136 @@ async def handle_list_tools():
     """List available filesystem tools"""
     return [
         types.Tool(
-            name="list_directory",
-            description="List contents of a directory",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Directory path to list (relative to root)",
-                        "default": "."
-                    }
-                },
-                "required": []
-            }
-        ),
-        types.Tool(
             name="read_file",
-            description="Read contents of a text file",
+            description="Read the contents of a file",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "File path to read (relative to root)"
+                        "description": "The path of the file to read"
                     }
                 },
                 "required": ["path"]
             }
         ),
         types.Tool(
+            name="read_multiple_files",
+            description="Read the contents of multiple files",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "paths": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of file paths to read"
+                    }
+                },
+                "required": ["paths"]
+            }
+        ),
+        types.Tool(
             name="write_file",
-            description="Write content to a file",
+            description="Create a new file or overwrite an existing file",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "File path to write (relative to root)"
+                        "description": "The path of the file to write"
                     },
                     "content": {
                         "type": "string",
-                        "description": "Content to write to the file"
+                        "description": "The content to write to the file"
                     }
                 },
                 "required": ["path", "content"]
             }
         ),
         types.Tool(
+            name="edit_file",
+            description="Make selective edits to a file",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path of the file to edit"
+                    },
+                    "edits": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "oldText": {"type": "string", "description": "Text to replace"},
+                                "newText": {"type": "string", "description": "New text"}
+                            },
+                            "required": ["oldText", "newText"]
+                        },
+                        "description": "List of edits to apply"
+                    }
+                },
+                "required": ["path", "edits"]
+            }
+        ),
+        types.Tool(
             name="create_directory",
-            description="Create a new directory",
+            description="Create a new directory or ensure it exists",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Directory path to create (relative to root)"
+                        "description": "The path of the directory to create"
                     }
                 },
                 "required": ["path"]
             }
         ),
         types.Tool(
-            name="delete_file",
-            description="Delete a file or directory",
+            name="list_directory",
+            description="List the contents of a directory",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Path to delete (relative to root)"
+                        "description": "The path of the directory to list"
                     }
                 },
                 "required": ["path"]
             }
         ),
         types.Tool(
-            name="file_info",
-            description="Get information about a file or directory",
+            name="directory_tree",
+            description="Get a tree view of a directory",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
-                        "description": "Path to get info for (relative to root)"
+                        "description": "The path of the directory to analyze"
                     }
                 },
                 "required": ["path"]
+            }
+        ),
+        types.Tool(
+            name="move_file",
+            description="Move or rename a file or directory",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "description": "The current path of the file or directory"
+                    },
+                    "destination": {
+                        "type": "string",
+                        "description": "The new path for the file or directory"
+                    }
+                },
+                "required": ["source", "destination"]
             }
         )
     ]
@@ -179,32 +204,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
     try:
         config = FilesystemConfig()
 
-        if name == "list_directory":
-            path = arguments.get("path", ".")
-            target_path = _get_safe_path(config, path)
-
-            if not target_path or not target_path.exists():
-                return [types.TextContent(type="text", text=f"Directory not found: {path}")]
-
-            if not target_path.is_dir():
-                return [types.TextContent(type="text", text=f"Path is not a directory: {path}")]
-
-            try:
-                items = []
-                for item in sorted(target_path.iterdir()):
-                    info = _get_file_info(item)
-                    items.append(info)
-
-                result = {
-                    "directory": str(target_path),
-                    "items": items,
-                    "count": len(items)
-                }
-                return [types.TextContent(type="text", text=str(result))]
-            except PermissionError:
-                return [types.TextContent(type="text", text=f"Permission denied: {path}")]
-
-        elif name == "read_file":
+        if name == "read_file":
             path = arguments["path"]
             target_path = _get_safe_path(config, path)
 
@@ -228,6 +228,34 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
             except PermissionError:
                 return [types.TextContent(type="text", text=f"Permission denied: {path}")]
 
+        elif name == "read_multiple_files":
+            paths = arguments["paths"]
+            results = []
+
+            for path in paths:
+                target_path = _get_safe_path(config, path)
+                if not target_path or not target_path.exists():
+                    results.append(f"File not found: {path}")
+                    continue
+
+                if not target_path.is_file():
+                    results.append(f"Path is not a file: {path}")
+                    continue
+
+                if not _is_allowed_file(config, target_path):
+                    results.append(f"File type not allowed: {path}")
+                    continue
+
+                try:
+                    content = target_path.read_text(encoding='utf-8')
+                    results.append(f"=== {path} ===\n{content}")
+                except UnicodeDecodeError:
+                    results.append(f"Cannot read binary file: {path}")
+                except PermissionError:
+                    results.append(f"Permission denied: {path}")
+
+            return [types.TextContent(type="text", text="\n\n".join(results))]
+
         elif name == "write_file":
             path = arguments["path"]
             content = arguments["content"]
@@ -246,6 +274,35 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
             except PermissionError:
                 return [types.TextContent(type="text", text=f"Permission denied: {path}")]
 
+        elif name == "edit_file":
+            path = arguments["path"]
+            edits = arguments["edits"]
+            target_path = _get_safe_path(config, path)
+
+            if not target_path or not target_path.exists():
+                return [types.TextContent(type="text", text=f"File not found: {path}")]
+
+            if not target_path.is_file():
+                return [types.TextContent(type="text", text=f"Path is not a file: {path}")]
+
+            if not _is_allowed_file(config, target_path):
+                return [types.TextContent(type="text", text=f"File type not allowed: {path}")]
+
+            try:
+                content = target_path.read_text(encoding='utf-8')
+
+                for edit in edits:
+                    old_text = edit["oldText"]
+                    new_text = edit["newText"]
+                    content = content.replace(old_text, new_text)
+
+                target_path.write_text(content, encoding='utf-8')
+                return [types.TextContent(type="text", text=f"File edited successfully: {path}")]
+            except UnicodeDecodeError:
+                return [types.TextContent(type="text", text=f"Cannot edit binary file: {path}")]
+            except PermissionError:
+                return [types.TextContent(type="text", text=f"Permission denied: {path}")]
+
         elif name == "create_directory":
             path = arguments["path"]
             target_path = _get_safe_path(config, path)
@@ -259,34 +316,86 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
             except PermissionError:
                 return [types.TextContent(type="text", text=f"Permission denied: {path}")]
 
-        elif name == "delete_file":
+        elif name == "list_directory":
             path = arguments["path"]
             target_path = _get_safe_path(config, path)
 
             if not target_path or not target_path.exists():
-                return [types.TextContent(type="text", text=f"Path not found: {path}")]
+                return [types.TextContent(type="text", text=f"Directory not found: {path}")]
+
+            if not target_path.is_dir():
+                return [types.TextContent(type="text", text=f"Path is not a directory: {path}")]
 
             try:
-                if target_path.is_file():
-                    target_path.unlink()
-                    return [types.TextContent(type="text", text=f"File deleted: {path}")]
-                elif target_path.is_dir():
-                    target_path.rmdir()
-                    return [types.TextContent(type="text", text=f"Directory deleted: {path}")]
-                else:
-                    return [types.TextContent(type="text", text=f"Cannot delete: {path}")]
-            except OSError as e:
-                return [types.TextContent(type="text", text=f"Delete failed: {e}")]
+                items = []
+                for item in sorted(target_path.iterdir()):
+                    prefix = "[DIR]" if item.is_dir() else "[FILE]"
+                    items.append(f"{prefix} {item.name}")
 
-        elif name == "file_info":
+                result = f"Contents of {path}:\n" + "\n".join(items)
+                return [types.TextContent(type="text", text=result)]
+            except PermissionError:
+                return [types.TextContent(type="text", text=f"Permission denied: {path}")]
+
+        elif name == "directory_tree":
             path = arguments["path"]
             target_path = _get_safe_path(config, path)
 
             if not target_path or not target_path.exists():
-                return [types.TextContent(type="text", text=f"Path not found: {path}")]
+                return [types.TextContent(type="text", text=f"Directory not found: {path}")]
 
-            info = _get_file_info(target_path)
-            return [types.TextContent(type="text", text=str(info))]
+            if not target_path.is_dir():
+                return [types.TextContent(type="text", text=f"Path is not a directory: {path}")]
+
+            try:
+                def build_tree(dir_path: Path, prefix: str = "") -> List[str]:
+                    lines = []
+                    items = sorted(dir_path.iterdir())
+
+                    for i, item in enumerate(items):
+                        is_last = i == len(items) - 1
+                        current_prefix = "└── " if is_last else "├── "
+
+                        if item.is_dir():
+                            lines.append(f"{prefix}{current_prefix}{item.name}/")
+                            next_prefix = prefix + ("    " if is_last else "│   ")
+                            lines.extend(build_tree(item, next_prefix))
+                        else:
+                            try:
+                                size = item.stat().st_size
+                                lines.append(f"{prefix}{current_prefix}{item.name} ({size} bytes)")
+                            except:
+                                lines.append(f"{prefix}{current_prefix}{item.name}")
+
+                    return lines
+
+                tree_lines = [f"{target_path.name}/"]
+                tree_lines.extend(build_tree(target_path))
+
+                return [types.TextContent(type="text", text="\n".join(tree_lines))]
+            except PermissionError:
+                return [types.TextContent(type="text", text=f"Permission denied: {path}")]
+
+        elif name == "move_file":
+            source = arguments["source"]
+            destination = arguments["destination"]
+
+            source_path = _get_safe_path(config, source)
+            dest_path = _get_safe_path(config, destination)
+
+            if not source_path or not source_path.exists():
+                return [types.TextContent(type="text", text=f"Source not found: {source}")]
+
+            if not dest_path:
+                return [types.TextContent(type="text", text=f"Invalid destination: {destination}")]
+
+            try:
+                source_path.rename(dest_path)
+                return [types.TextContent(type="text", text=f"Moved {source} to {destination}")]
+            except PermissionError:
+                return [types.TextContent(type="text", text=f"Permission denied")]
+            except OSError as e:
+                return [types.TextContent(type="text", text=f"Move failed: {e}")]
 
         else:
             raise ValueError(f"Unknown tool: {name}")

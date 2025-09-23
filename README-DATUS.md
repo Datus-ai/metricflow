@@ -50,7 +50,7 @@ datus-mf validate
 - `datus-mf health-checks` - Test database connection
 - `datus-mf status` - Show integration status
 - `datus-mf query -q "your question"` - Query helper (requires Datus Agent)
-- `mcp-metricflow serve` - Start MCP server with SSE support
+- `mcp-metricflow serve` - Start MetricFlow MCP server
 
 ## What Gets Setup
 
@@ -59,7 +59,7 @@ datus-mf validate
 - **Semantic models directory** (`~/.metricflow/semantic_models/`)
 - **Demo database** (if using `--demo` flag)
 - **MCP filesystem server** (if npm available)
-- **MCP MetricFlow server** (Model Context Protocol with SSE support)
+- **MCP MetricFlow server** (Model Context Protocol with JSON-RPC support)
 
 ## Integration with Datus Agent
 
@@ -84,14 +84,16 @@ Datus> !gen_metrics
 Start the MetricFlow MCP server for LLM integration:
 
 ```bash
-# Start MCP server with SSE support
+# Start MetricFlow MCP server
 mcp-metricflow serve --host 0.0.0.0 --port 8080
 
 # Test MCP server
 mcp-metricflow test
 
-# Access SSE endpoint
-curl -N http://localhost:8080/sse
+# Test MCP endpoint
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1}'
 ```
 
 For detailed MCP server documentation, see [MCP-SERVER.md](MCP-SERVER.md).

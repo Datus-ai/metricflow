@@ -1,15 +1,25 @@
-# MetricFlow MCP Server
+# MetricFlow MCP Servers
 
-A Model Context Protocol (MCP) server that wraps MetricFlow functionality and exposes it via tools and resources with Server-Sent Events (SSE) support.
+A collection of Model Context Protocol (MCP) servers that provide MetricFlow functionality and filesystem access using JSON-RPC protocol.
 
 ## Overview
 
-The MetricFlow MCP Server provides a standardized interface for LLMs to interact with MetricFlow, enabling:
+This package includes two MCP servers that provide a standardized interface for LLMs:
 
+### MetricFlow MCP Server
 - **Metric Queries**: Execute MetricFlow queries with structured parameters
 - **Configuration Management**: Access and validate MetricFlow configurations
-- **Real-time Communication**: SSE support for streaming query results
+- **Validation Tools**: Built-in configuration and health checks
+
+### Filesystem MCP Server
+- **File Operations**: Read, write, and manage files in the semantic models directory
+- **Directory Management**: List, create, and organize project files
+- **Secure Access**: Safe file operations within allowed directories
+
+### Common Features
+- **Standard Protocol**: JSON-RPC 2.0 compliant MCP implementation
 - **Health Monitoring**: Built-in health checks and status reporting
+- **Docker Support**: Ready-to-use containerized deployment
 
 ## Quick Start
 
@@ -33,198 +43,173 @@ datus-mf setup --demo
 datus-mf setup --dialect snowflake
 ```
 
-### 3. Start MCP Server
+### 3. Start MCP Servers
 
 ```bash
-# Start the MCP server
+# Start MetricFlow MCP server (port 8080)
 mcp-metricflow serve
 
-# Or with custom host/port
+# Start Filesystem MCP server (port 8081)
+python -m mcp_metricflow.filesystem_server /path/to/semantic/models
+
+# Or with custom configuration
 mcp-metricflow serve --host 0.0.0.0 --port 8080
+FILESYSTEM_MCP_PORT=8081 FILESYSTEM_ROOT_PATH=/path/to/models python -m mcp_metricflow.filesystem_server
 ```
 
 ### 4. Test Connection
 
 ```bash
-# Test MetricFlow integration
-mcp-metricflow test
+# Test MetricFlow MCP endpoint
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {}}'
 
-# Access SSE endpoint
-curl -N http://localhost:8080/sse
+# Test Filesystem MCP endpoint
+curl -X POST http://localhost:8081/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {}}'
 ```
 
 ## Docker Deployment
 
-### Quick Start with Docker Compose
+### Build Docker Image
 
 ```bash
-# Build and start MCP server
-docker-compose -f docker-compose.mcp.yml up mcp-metricflow
+# Build the image
+docker build -t metricflow-mcp .
+```
+
+### Quick Start
+
+```bash
+# Start both MCP servers
+docker run -p 8080:8080 -p 8081:8081 metricflow-mcp serve
 
 # Start demo server with auto-setup
-docker-compose -f docker-compose.mcp.yml up mcp-metricflow-demo
+docker run -p 8080:8080 -p 8081:8081 metricflow-mcp demo
 
 # Access endpoints
-# - SSE: http://localhost:8080/sse
-# - Health: http://localhost:8080/sse/health
+# - MetricFlow MCP: http://localhost:8080/mcp
+# - Filesystem MCP: http://localhost:8081/mcp
+# - MetricFlow Health: http://localhost:8080/health
+# - Filesystem Health: http://localhost:8081/health
 ```
 
 ### Production Deployment
 
 ```bash
-# Start with nginx load balancer
-docker-compose -f docker-compose.mcp.yml up
-
-# Access via proxy
-# - SSE: http://localhost/sse
-# - Health: http://localhost/health
+# Run with persistent volumes
+docker run -d \
+  -p 8080:8080 \
+  -p 8081:8081 \
+  -v $(pwd)/data:/root/.metricflow \
+  --name metricflow-mcp \
+  metricflow-mcp serve
 ```
 
 ## MCP Tools
 
-The server exposes the following tools for LLM interaction:
+### MetricFlow MCP Server Tools
 
-### Query Tools
-
+#### Query Tools
 - **`list_metrics`**: List all available metrics
-- **`list_dimensions`**: List all available dimensions
+- **`get_dimensions`**: Get dimensions for MetricFlow project
+- **`get_entities`**: Get entities for MetricFlow project
 - **`query_metrics`**: Execute MetricFlow queries with structured parameters
-- **`get_sql_for_query`**: Get SQL for a query without executing
+- **`get_dimension_values`**: Get possible values for a specific dimension
 
-### Management Tools
-
+#### Management Tools
 - **`validate_configs`**: Validate MetricFlow configuration and semantic models
-- **`health_check`**: Perform MetricFlow health checks
-- **`explain_metric`**: Get detailed information about a specific metric
 
-## MCP Resources
+### Filesystem MCP Server Tools
 
-- **`metricflow/config`**: Get MetricFlow configuration
-- **`metricflow/status`**: Get MetricFlow status and health information
+#### File Operations
+- **`read_file`**: Read contents of a text file
+- **`write_file`**: Write content to a file
+- **`file_info`**: Get information about a file or directory
 
-## SSE Protocol
+#### Directory Operations
+- **`list_directory`**: List contents of a directory
+- **`create_directory`**: Create a new directory
+- **`delete_file`**: Delete a file or directory
+
+## JSON-RPC Protocol
+
+### Server Endpoints
+
+- **MetricFlow MCP**: `http://localhost:8080/mcp`
+- **Filesystem MCP**: `http://localhost:8081/mcp`
 
 ### Connection
 
-Connect to the SSE endpoint:
+Connect to either MCP endpoint using JSON-RPC 2.0:
 
 ```bash
-curl -N -H "Accept: text/event-stream" http://localhost:8080/sse
+# Initialize MetricFlow MCP
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {}}'
+
+# Initialize Filesystem MCP
+curl -X POST http://localhost:8081/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {}}'
 ```
 
-### Event Types
+### Available Methods
 
-- **`connection`**: Connection established with server capabilities
-- **`heartbeat`**: Keep-alive events every 30 seconds
-- **`query_started`**: Query execution started
-- **`query_results`**: Query results available
-- **`query_error`**: Query execution error
-- **`error`**: General connection error
+- **`initialize`**: Initialize MCP connection
+- **`notifications/initialized`**: Notify initialization complete
+- **`tools/list`**: List available tools for the specific server
+- **`tools/call`**: Call a specific tool
 
-### Example Events
+### Example Tool Calls
 
-```
-event: connection
-data: {
-data:   "type": "connection_established",
-data:   "connection_id": "conn_1234567890",
-data:   "server": "MetricFlow MCP Server",
-data:   "capabilities": {
-data:     "tools": ["list_metrics", "query_metrics", ...],
-data:     "resources": ["metricflow/config", "metricflow/status"],
-data:     "streaming": true
-data:   }
-data: }
+```bash
+# List MetricFlow metrics
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "id": 1,
+    "params": {
+      "name": "list_metrics",
+      "arguments": {}
+    }
+  }'
 
-event: heartbeat
-data: {
-data:   "timestamp": 1640995200.123,
-data:   "connection_id": "conn_1234567890"
-data: }
-```
-
-## API Examples
-
-### Using MCP Tools
-
-```python
-from mcp_metricflow.server import list_metrics, query_metrics, QueryRequest
-
-# List available metrics
-metrics = list_metrics()
-print(f"Found {len(metrics)} metrics")
-
-# Execute a query
-request = QueryRequest(
-    metrics=["revenue"],
-    dimensions=["metric_time"],
-    where="metric_time >= '2023-01-01'",
-    limit=100
-)
-results = query_metrics(request)
-print(results)
+# List directory contents
+curl -X POST http://localhost:8081/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "id": 1,
+    "params": {
+      "name": "list_directory",
+      "arguments": {"path": "."}
+    }
+  }'
 ```
 
-### SSE Client Example
-
-```python
-import requests
-import json
-
-def listen_to_sse():
-    response = requests.get(
-        'http://localhost:8080/sse',
-        headers={'Accept': 'text/event-stream'},
-        stream=True
-    )
-
-    for line in response.iter_lines():
-        if line:
-            line = line.decode('utf-8')
-            if line.startswith('data: '):
-                data = line[6:]  # Remove 'data: ' prefix
-                try:
-                    event_data = json.loads(data)
-                    print(f"Event: {event_data}")
-                except json.JSONDecodeError:
-                    print(f"Raw data: {data}")
-
-listen_to_sse()
-```
-
-### JavaScript SSE Client
-
-```javascript
-const eventSource = new EventSource('http://localhost:8080/sse');
-
-eventSource.onopen = function(event) {
-    console.log('SSE connection opened');
-};
-
-eventSource.onmessage = function(event) {
-    const data = JSON.parse(event.data);
-    console.log('Received:', data);
-};
-
-eventSource.addEventListener('query_results', function(event) {
-    const results = JSON.parse(event.data);
-    console.log('Query results:', results);
-});
-
-eventSource.onerror = function(event) {
-    console.error('SSE error:', event);
-};
-```
 
 ## Configuration
 
 ### Environment Variables
 
+#### MetricFlow MCP Server
 - **`MF_PROJECT_DIR`**: MetricFlow project directory (default: `~/.metricflow`)
 - **`MF_VERBOSE`**: Enable verbose logging (default: `true`)
 - **`MF_MODEL_PATH`**: Path to semantic models (default: `~/.metricflow/semantic_models`)
 - **`MCP_HOST`**: MCP server host (default: `0.0.0.0`)
 - **`MCP_PORT`**: MCP server port (default: `8080`)
+
+#### Filesystem MCP Server
+- **`FILESYSTEM_ROOT_PATH`**: Root directory for filesystem access (default: `$MF_MODEL_PATH`)
+- **`FILESYSTEM_MCP_HOST`**: Filesystem MCP server host (default: `0.0.0.0`)
+- **`FILESYSTEM_MCP_PORT`**: Filesystem MCP server port (default: `8081`)
 
 ### Docker Environment
 
@@ -239,29 +224,34 @@ environment:
 
 ## Health Monitoring
 
-### Health Check Endpoint
+### Health Check Endpoints
 
 ```bash
-curl http://localhost:8080/sse/health
+# MetricFlow MCP health
+curl http://localhost:8080/health
+
+# Filesystem MCP health
+curl http://localhost:8081/health
 ```
 
-Response:
+Response format:
 ```json
 {
-  "status": "healthy",
-  "active_connections": 2,
-  "timestamp": 1640995200.123
+  "status": "healthy"
 }
 ```
 
 ### Docker Health Checks
 
-```yaml
-healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost:8080/sse/health"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
+```bash
+# Check MetricFlow MCP server
+docker exec metricflow-mcp curl -f http://localhost:8080/health
+
+# Check Filesystem MCP server
+docker exec metricflow-mcp curl -f http://localhost:8081/health
+
+# Check both servers in one command
+docker exec metricflow-mcp sh -c 'curl -f http://localhost:8080/health && curl -f http://localhost:8081/health'
 ```
 
 ## Troubleshooting
@@ -275,13 +265,23 @@ healthcheck:
    datus-mf status
    ```
 
-2. **SSE connection fails**
+2. **MCP connection fails**
    ```bash
-   # Check if server is running
-   curl http://localhost:8080/sse/health
+   # Check if servers are running
+   curl http://localhost:8080/health  # MetricFlow
+   curl http://localhost:8081/health  # Filesystem
+
+   # Test MCP endpoints
+   curl -X POST http://localhost:8080/mcp \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1}'
+
+   curl -X POST http://localhost:8081/mcp \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1}'
 
    # Check logs
-   docker logs mcp-metricflow-server
+   docker logs metricflow-mcp
    ```
 
 3. **Query execution errors**
@@ -299,8 +299,14 @@ healthcheck:
 # Start with verbose logging
 mcp-metricflow serve --verbose
 
-# Check connection status
-curl -N http://localhost:8080/sse | head -20
+# Test MCP connections
+curl -X POST http://localhost:8080/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'
+
+curl -X POST http://localhost:8081/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'
 ```
 
 ## Development
@@ -310,38 +316,11 @@ curl -N http://localhost:8080/sse | head -20
 ```
 mcp_metricflow/
 ├── __init__.py          # Package initialization
-├── server.py            # Main MCP server implementation
-├── cli.py               # Command-line interface
-└── sse_transport.py     # SSE transport implementation
+├── server.py            # MetricFlow MCP server implementation
+├── filesystem_server.py # Filesystem MCP server implementation
+└── cli.py               # Command-line interface
 ```
 
 ### Adding New Tools
 
-```python
-@mcp.tool()
-def my_custom_tool(param: str) -> Dict[str, Any]:
-    """Custom tool description"""
-    # Implementation
-    return {"result": "success"}
-```
-
-### Adding New Resources
-
-```python
-@mcp.resource("my/resource")
-async def my_resource() -> str:
-    """Custom resource description"""
-    return "Resource content"
-```
-
-## Integration with LLMs
-
-The MCP server can be integrated with various LLM clients that support the Model Context Protocol:
-
-
-- Claude Desktop
-- Claude Code
-- Custom MCP clients
-- AI agents and assistants
-
-Refer to the [Model Context Protocol documentation](https://modelcontextprotocol.io/) for client integration details.
+Tools can be added to either server by implementing the appropriate MCP tool handlers. Refer to the existing implementations in `server.py` and `filesystem_server.py` for examples.

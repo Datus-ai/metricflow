@@ -55,7 +55,6 @@ datus-mf validate
 ## What Gets Setup
 
 - **MetricFlow configuration** (`~/.metricflow/config.yml`)
-- **Datus Agent configuration** (`~/.datus/conf/agent.yml`)
 - **Environment variables** (`~/.metricflow/datus_env.sh`)
 - **Semantic models directory** (`~/.metricflow/semantic_models/`)
 - **Demo database** (if using `--demo` flag)

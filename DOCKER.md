@@ -49,7 +49,6 @@ docker run -p 8080:8080 \
 
 All configurations are automatically initialized on container startup:
 - MetricFlow config: `/root/.metricflow/config.yml`
-- Datus config: `/root/.datus/conf/agent.yml`
 
 Volumes persist configuration between container restarts.
 

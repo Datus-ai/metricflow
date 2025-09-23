@@ -16,7 +16,6 @@ from mcp.server import Server
 from mcp import types
 from pydantic import BaseModel, Field
 
-from .sse_transport import SSETransport, StreamingQueryHandler
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -269,10 +268,10 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
 
 
 def create_app():
-    """Create the FastAPI application with MCP and SSE support"""
+    """Create the FastAPI application with MCP JSON-RPC support"""
     from fastapi import FastAPI
 
-    # Create basic FastAPI app for SSE support
+    # Create basic FastAPI app for MCP support
     app = FastAPI(title="MetricFlow MCP Server")
 
     @app.get("/")
@@ -280,7 +279,7 @@ def create_app():
         return {
             "name": "MetricFlow MCP Server",
             "status": "running",
-            "endpoints": {"sse": "/sse", "health": "/health", "mcp": "/mcp"},
+            "endpoints": {"mcp": "/mcp", "health": "/health"},
             "available_methods": ["initialize", "notifications/initialized", "tools/list", "tools/call"],
         }
 
@@ -339,13 +338,7 @@ def create_app():
                 "error": {"code": -32603, "message": f"Internal error: {str(e)}"},
             }
 
-    # Add SSE transport
-    sse_transport = SSETransport(app)
-    streaming_handler = StreamingQueryHandler(sse_transport)
-
     # Store references for use in tools
-    app.state.sse_transport = sse_transport
-    app.state.streaming_handler = streaming_handler
     app.state.mcp_server = server
 
     return app
@@ -363,7 +356,7 @@ if __name__ == "__main__":
 
     logger.info(f"Starting MetricFlow MCP Server on {host}:{port}")
     logger.info("Available endpoints:")
-    logger.info(f"  - SSE: http://{host}:{port}/sse")
-    logger.info(f"  - Health: http://{host}:{port}/sse/health")
+    logger.info(f"  - MCP: http://{host}:{port}/mcp")
+    logger.info(f"  - Health: http://{host}:{port}/health")
 
     uvicorn.run(app, host=host, port=port)

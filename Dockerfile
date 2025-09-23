@@ -1,6 +1,4 @@
-# Use Python 3.12 as base image (required for MetricFlow)
 FROM m.daocloud.io/docker.io/library/python:3.12-slim
-#FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.12-slim
 
 # Set environment variables for non-interactive installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -54,8 +52,8 @@ ENV MF_MODEL_PATH=/root/.metricflow/semantic_models
 ENV MCP_HOST=0.0.0.0
 ENV MCP_PORT=8080
 
-# Expose MCP server port
-EXPOSE 8080
+# Expose MCP server ports
+EXPOSE 8080 8081
 
 # Use docker-init.sh as entrypoint
 ENTRYPOINT ["./docker-init.sh"]

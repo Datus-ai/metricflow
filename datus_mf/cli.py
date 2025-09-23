@@ -138,10 +138,6 @@ def status():
     mf_config = setup_manager.mf_config_dir / "config.yml"
     click.echo(f"MetricFlow config: {'✅' if mf_config.exists() else '❌'} {mf_config}")
 
-    # Check Datus config
-    datus_config = setup_manager.datus_config_dir / "conf" / "agent.yml"
-    click.echo(f"Datus Agent config: {'✅' if datus_config.exists() else '❌'} {datus_config}")
-
     # Check semantic models directory
     semantic_dir = setup_manager.mf_config_dir / "semantic_models"
     click.echo(f"Semantic models dir: {'✅' if semantic_dir.exists() else '❌'} {semantic_dir}")

@@ -63,7 +63,7 @@ def run_server(args):
     print(f"🚀 Starting MetricFlow MCP Server")
     print(f"   Host: {host}")
     print(f"   Port: {port}")
-    print(f"   SSE endpoint: http://{host}:{port}/sse")
+    print(f"   MCP endpoint: http://{host}:{port}/mcp")
     print(f"   Health endpoint: http://{host}:{port}/health")
     print("")
     print("Available MCP tools (matching Datus-agent):")

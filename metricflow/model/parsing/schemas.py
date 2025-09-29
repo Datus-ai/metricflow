@@ -74,7 +74,7 @@ materialization_destination_schema = {
         },
         "tableau_params": tableau_params,
     },
-    "anyOf": [{"not": {"$ref": "#/definitions/is-tableau"}}, {"required": ["tableau_params"]}],
+    "anyOf": [{"not": {"$ref": "materialization_destination_schema#/definitions/is-tableau"}}, {"required": ["tableau_params"]}],
     "definitions": {"is-tableau": {"properties": {"location": {"enum": materialization_location_tableau_values}}}},
     "additionalProperties": False,
 }
@@ -250,7 +250,7 @@ dimension_schema = {
         "type_params": {"$ref": "dimension_type_params_schema"},
     },
     # dimension must have type_params if its a time dimension
-    "anyOf": [{"not": {"$ref": "#/definitions/is-time-dimension"}}, {"required": ["type_params"]}],
+    "anyOf": [{"not": {"$ref": "dimension_schema#/definitions/is-time-dimension"}}, {"required": ["type_params"]}],
     "definitions": {
         "is-time-dimension": {
             "properties": {"type": {"enum": time_dimension_type_values}},

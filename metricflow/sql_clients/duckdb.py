@@ -1,11 +1,24 @@
 import logging
 import threading
-from typing import ClassVar, Optional, Sequence, Callable
+import time
+from typing import Callable, ClassVar, Optional, Sequence
 
 import pandas as pd
 import sqlalchemy
 from sqlalchemy import inspect
 from sqlalchemy.pool import StaticPool
+
+try:
+    from duckdb.typing import DuckDBPyType  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - duckdb is optional in some builds
+    DuckDBPyType = None  # type: ignore[assignment]
+else:
+    if getattr(DuckDBPyType, "__hash__", None) is None:
+
+        def _duckdb_py_type_hash(self: object) -> int:
+            return hash(str(self))
+
+        DuckDBPyType.__hash__ = _duckdb_py_type_hash  # type: ignore[attr-defined]
 
 from metricflow.dataflow.sql_table import SqlTable
 from metricflow.protocols.sql_client import SqlEngine, SqlIsolationLevel
@@ -118,11 +131,53 @@ class DuckDbSqlClient(SqlAlchemySqlClient):
         self, sql_table: SqlTable, df: pd.DataFrame, chunk_size: Optional[int] = None
     ) -> None:
         with self._concurrency_lock:
-            return super().create_table_from_dataframe(
-                sql_table=sql_table,
-                df=df,
-                chunk_size=chunk_size,
-            )
+            raw_connection = self._engine.raw_connection()
+            try:
+                logger.info(
+                    f"Creating table '{sql_table.sql}' from a DataFrame with {df.shape[0]} row(s)"
+                )
+                start_time = time.time()
+
+                # For DuckDB, create table in the correct schema without catalog prefix
+                # First ensure schema exists
+                try:
+                    raw_connection.execute(f"CREATE SCHEMA IF NOT EXISTS {sql_table.schema_name}")
+                    raw_connection.commit()
+                except Exception as e:
+                    logger.warning(f"Failed to create schema {sql_table.schema_name}: {e}")
+
+                # Then create table directly using SQL to avoid catalog prefix issues
+                try:
+                    # Create table structure (suppress warning by using warnings module)
+                    temp_table = f"temp_{sql_table.table_name}"
+                    import warnings
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", UserWarning)
+                        df.to_sql(name=temp_table, con=raw_connection, schema=None, index=False, if_exists="replace")
+
+                    # Move table to correct schema
+                    raw_connection.execute(f"CREATE TABLE {sql_table.sql} AS SELECT * FROM {temp_table}")
+                    raw_connection.execute(f"DROP TABLE {temp_table}")
+                    raw_connection.commit()
+                    logger.info(f"Successfully created table in schema {sql_table.schema_name}")
+                except Exception as e:
+                    logger.warning(f"DuckDB schema handling failed, using default: {e}")
+                    # Fallback to original method
+                    df.to_sql(
+                        name=sql_table.table_name,
+                        con=raw_connection,
+                        schema=sql_table.schema_name,
+                        index=False,
+                        if_exists="fail",
+                        method="multi",
+                        chunksize=chunk_size,
+                    )
+                raw_connection.commit()
+                logger.info(
+                    f"Created table '{sql_table.sql}' from a DataFrame in {time.time() - start_time:.2f}s"
+                )
+            finally:
+                raw_connection.close()
 
     def cancel_request(self, match_function: Callable[[CombinedSqlTags], bool]) -> int:  # noqa: D
         raise NotImplementedError

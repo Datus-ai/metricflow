@@ -116,7 +116,14 @@ class SqlAlchemySqlClient(BaseSqlClientImplementation, ABC):
         with self._engine_connection(
             self._engine, isolation_level=isolation_level, system_tags=system_tags, extra_tags=extra_tags
         ) as conn:
-            return pd.read_sql_query(sqlalchemy.text(stmt), conn, params=bind_params.param_dict)
+            result = conn.execute(sqlalchemy.text(stmt), bind_params.param_dict)
+            try:
+                columns = list(result.keys())
+                rows = [tuple(row) for row in result.fetchall()]
+            finally:
+                result.close()
+
+            return pd.DataFrame(rows, columns=columns)
 
     def _engine_specific_execute_implementation(
         self,

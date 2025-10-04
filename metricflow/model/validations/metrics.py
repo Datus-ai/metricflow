@@ -46,7 +46,7 @@ class CumulativeMetricRule(ModelValidationRule):
                                 file_context=FileContext.from_metadata(metadata=metric.metadata),
                                 metric=MetricModelReference(metric_name=metric.name),
                             ),
-                            message="".join(traceback.format_exception_only(etype=type(e), value=e)),
+                            message="".join(traceback.format_exception_only(type(e), e)),
                             extra_detail="".join(traceback.format_tb(e.__traceback__)),
                         )
                     )

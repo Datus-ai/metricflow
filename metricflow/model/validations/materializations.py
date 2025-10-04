@@ -118,7 +118,7 @@ class ValidMaterializationRule(ModelValidationRule):
                     message="Unable to run materialization validations as the building of the semantic model failed. "
                     "If running the suite of validation rules, the underlying cause should be covered by another "
                     "validation error.",
-                    extra_detail="".join(traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)),
+                    extra_detail="".join(traceback.format_exception(type(e), e, e.__traceback__)),
                 )
             ]
 

@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "datus-mf"
+name = "datus-metricflow"
 version = "0.1.0"
 description = "Simplified MetricFlow integration for Datus Agent - One-command setup for semantic metrics"
 authors = ["Datus.ai <support@datus.ai>", "Transform <hello@transformdata.io>"]

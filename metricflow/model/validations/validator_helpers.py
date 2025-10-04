@@ -148,7 +148,7 @@ class ValidationIssue(ABC, BaseModel):
 
     message: str
     context: Optional[ValidationContext] = None
-    extra_detail: Optional[str]
+    extra_detail: Optional[str] = None
 
     @property
     @abstractmethod
@@ -304,7 +304,7 @@ def generate_exception_issue(
 
     return ValidationError(
         context=context,
-        message=f"An error occured while {what_was_being_done} - {''.join(traceback.format_exception_only(etype=type(e), value=e))}",
+        message=f"An error occured while {what_was_being_done} - {''.join(traceback.format_exception_only(type(e), e))}",
         extra_detail="\n".join([f"{key}: {value}" for key, value in extras.items()]),
     )
 

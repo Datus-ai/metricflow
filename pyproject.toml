@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "datus-metricflow"
-version = "0.1.0"
+version = "0.1.1"
 description = "Simplified MetricFlow integration for Datus Agent - One-command setup for semantic metrics"
 authors = ["Datus.ai <support@datus.ai>", "Transform <hello@transformdata.io>"]
 license = "AGPL-3.0-or-later"

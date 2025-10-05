@@ -61,9 +61,10 @@ class DatusMetricFlowSetup:
     def setup_environment_variables(self):
         """Setup environment variables for the integration."""
         env_vars = {
-            'MF_PROJECT_DIR': str(self.mf_config_dir),
-            'MF_VERBOSE': 'true',
-            'MF_MODEL_PATH': str(self.mf_config_dir / "semantic_models")
+            "MF_PROJECT_DIR": str(self.mf_config_dir),
+            "MF_VERBOSE": "true",
+            "MF_MODEL_PATH": str(self.mf_config_dir / "semantic_models"),
+            "MF_PATH": "`which mf`",
         }
 
         # Create a shell script for environment setup

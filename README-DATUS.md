@@ -112,6 +112,7 @@ If automatic setup fails:
 export MF_PROJECT_DIR=~/.metricflow
 export MF_VERBOSE=true
 export MF_MODEL_PATH=~/.metricflow/semantic_models
+export MF_PATH=`which mf`
 ```
 
 ### Install MCP Server Manually

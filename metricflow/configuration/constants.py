@@ -32,4 +32,10 @@ ENV_MF_DICT = {
     CONFIG_DWH_SCHEMA: "MF_DWH_SCHEMA",
     CONFIG_DWH_WAREHOUSE: "MF_DWH_WAREHOUSE",
     CONFIG_MODEL_PATH: "MF_MODEL_PATH",
+    CONFIG_EMAIL: "MF_EMAIL",
+}
+
+# Optional environment variables with default values
+OPTIONAL_ENV_VARS = {
+    CONFIG_EMAIL: "",  # Default to empty string if not set
 }

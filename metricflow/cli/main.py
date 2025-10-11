@@ -757,9 +757,6 @@ def validate_configs(
     """Perform validations against the defined model configurations."""
     cfg.verbose = True
 
-    if not show_all:
-        print("(To see warnings and future-errors, run again with flag `--show-all`)")
-
     # Skip linting validation for dbt cloud
     if cfg.dbt_cloud_configs is not None:
         lint_results = ModelValidationResults()

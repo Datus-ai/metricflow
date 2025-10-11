@@ -21,13 +21,16 @@ def cli():
 @cli.command()
 @click.option("--demo", is_flag=True, help="Setup with demo data and DuckDB")
 @click.option(
-    "--dialect",
-    default="duckdb",
-    type=click.Choice(["duckdb", "snowflake", "bigquery", "redshift", "postgresql"]),
-    help="Database dialect to configure",
+    "--namespace",
+    help="Namespace from Datus config to use for setup",
 )
-def setup(demo: bool, dialect: str):
-    """Setup Datus MetricFlow integration."""
+def setup(demo: bool, namespace: str):
+    """Setup Datus MetricFlow integration.
+
+    Two setup modes:
+    1. --demo: Quick demo setup with DuckDB
+    2. --namespace: Load config from Datus agent configuration
+    """
 
     click.echo("🚀 Setting up Datus MetricFlow integration...")
 
@@ -36,119 +39,64 @@ def setup(demo: bool, dialect: str):
     # Create necessary directories
     setup_manager.ensure_directories()
 
-    # Create configurations
-    setup_manager.create_metricflow_config(dialect)
+    # Mode 1: Setup from Datus namespace configuration
+    if namespace:
+        click.echo(f"📖 Loading configuration for namespace: {namespace}")
 
-    # Setup environment variables
-    setup_manager.setup_environment_variables()
+        # Load Datus config
+        if not setup_manager.load_datus_config():
+            click.echo("❌ Failed to load Datus config")
+            sys.exit(1)
 
-    # Setup MetricFlow configuration
+        # Get database config for namespace
+        db_config = setup_manager.get_namespace_db_config(namespace)
+        if not db_config:
+            sys.exit(1)
+
+        click.echo(f"✅ Found configuration for namespace '{namespace}'")
+        click.echo(f"   Database type: {db_config.get('type')}")
+
+        # Setup environment variables from namespace config
+        setup_manager.setup_environment_variables(namespace=namespace, db_config=db_config)
+
+        # Create semantic models directory
+        semantic_models_dir = pathlib.Path.home() / ".metricflow" / "semantic_models"
+        semantic_models_dir.mkdir(exist_ok=True)
+
+        click.echo("\n✅ Setup completed!")
+        click.echo(f"\nNext step: Start Datus CLI with: datus-cli --namespace {namespace}")
+        return
+
+    # Mode 2: Demo setup
     if demo:
         click.echo("🎯 Setting up demo environment with DuckDB...")
+
+        # Create configurations
+        setup_manager.create_metricflow_config(dialect="duckdb")
 
         # Run mf tutorial to create demo database
         setup_manager.run_mf_tutorial()
 
-    # Try to install npm packages
-    setup_manager.check_npm_and_install_filesystem_server()
+        # Setup environment variables
+        setup_manager.setup_environment_variables()
 
-    # Create semantic models directory
-    semantic_models_dir = pathlib.Path.home() / ".metricflow" / "semantic_models"
-    semantic_models_dir.mkdir(exist_ok=True)
+        # Try to install npm packages
+        setup_manager.check_npm_and_install_filesystem_server()
 
-    click.echo("\n✅ Setup completed!")
-    click.echo("\nNext steps:")
-    click.echo("1. Source environment variables: source ~/.metricflow/datus_env.sh")
+        # Create semantic models directory
+        semantic_models_dir = pathlib.Path.home() / ".metricflow" / "semantic_models"
+        semantic_models_dir.mkdir(exist_ok=True)
 
-    if demo:
-        click.echo("2. Test MetricFlow: mf validate-configs")
-        click.echo("3. Start Datus CLI: datus-cli --namespace local_duckdb")
-    else:
-        click.echo("2. Edit ~/.metricflow/config.yml with your database credentials")
-        click.echo("3. Test connection: mf health-checks")
-        click.echo("4. Validate configs: mf validate-configs")
+        click.echo("\n✅ Setup completed!")
+        click.echo("\nNext step: Start Datus CLI with: datus-cli --namespace local_duckdb")
+        return
 
-
-@cli.command()
-@click.option('--question', '-q', help='Ask a natural language question about your data')
-def query(question: str):
-    """Query data using natural language (requires Datus Agent)."""
-
-    if not question:
-        question = click.prompt("Enter your question about the data")
-
-    click.echo(f"🤔 Processing question: {question}")
-    click.echo("💡 This requires Datus Agent to be running.")
-    click.echo("   Please use: datus-cli --namespace local_duckdb")
-    click.echo(f"   Then ask: {question}")
-
-
-@cli.command(context_settings={"ignore_unknown_options": True})
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-def validate(args: tuple[str, ...]):
-    """Validate MetricFlow configurations via the MetricFlow CLI."""
-
-    try:
-        from metricflow.cli.main import cli as metricflow_cli
-    except ImportError:
-        click.echo("❌ MetricFlow not properly installed")
-        sys.exit(1)
-
-    try:
-        exit_code = metricflow_cli.main(args=("validate-configs", *args), standalone_mode=False)
-    except SystemExit as exc:
-        exit_code = exc.code
-    except Exception as exc:
-        click.echo(f"❌ MetricFlow validation failed: {exc}")
-        sys.exit(1)
-
-    if isinstance(exit_code, int) and exit_code is not None:
-        sys.exit(exit_code)
-
-
-@cli.command()
-def health_checks():
-    """Run MetricFlow health checks."""
-
-    try:
-        import subprocess
-        result = subprocess.run(['mf', 'health-checks'], capture_output=True, text=True)
-
-        click.echo(result.stdout)
-        if result.stderr:
-            click.echo(result.stderr, err=True)
-
-        sys.exit(result.returncode)
-
-    except Exception as e:
-        click.echo(f"❌ Error running health checks: {e}")
-        sys.exit(1)
-
-
-@cli.command()
-def status():
-    """Show Datus MetricFlow integration status."""
-
-    setup_manager = DatusMetricFlowSetup()
-
-    click.echo("📊 Datus MetricFlow Integration Status")
-    click.echo("=" * 40)
-
-    # Check MetricFlow config
-    mf_config = setup_manager.mf_config_dir / "config.yml"
-    click.echo(f"MetricFlow config: {'✅' if mf_config.exists() else '❌'} {mf_config}")
-
-    # Check semantic models directory
-    semantic_dir = setup_manager.mf_config_dir / "semantic_models"
-    click.echo(f"Semantic models dir: {'✅' if semantic_dir.exists() else '❌'} {semantic_dir}")
-
-    # Check demo database
-    demo_db = setup_manager.mf_config_dir / "duck.db"
-    click.echo(f"Demo database: {'✅' if demo_db.exists() else '❌'} {demo_db}")
-
-    # Check environment script
-    env_script = setup_manager.mf_config_dir / "datus_env.sh"
-    click.echo(f"Environment script: {'✅' if env_script.exists() else '❌'} {env_script}")
+    # If no mode specified, show error
+    click.echo("❌ Please specify either --demo or --namespace")
+    click.echo("   Examples:")
+    click.echo("     datus-mf setup --demo")
+    click.echo("     datus-mf setup --namespace starrocks")
+    sys.exit(1)
 
 
 if __name__ == '__main__':

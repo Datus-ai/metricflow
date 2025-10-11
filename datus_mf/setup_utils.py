@@ -177,7 +177,7 @@ class DatusMetricFlowSetup:
                 env_vars["MF_DWH_USER"] = resolve_env(db_config.get("username", ""))
                 env_vars["MF_DWH_PASSWORD"] = resolve_env(db_config.get("password", ""))
                 env_vars["MF_DWH_DB"] = resolve_env(db_config.get("database", ""))
-                env_vars["MF_DWH_SCHEMA"] = resolve_env(db_config.get("schema", ""))
+                env_vars["MF_DWH_SCHEMA"] = resolve_env(db_config.get("schema", "default"))
                 env_vars["MF_DWH_WAREHOUSE"] = resolve_env(db_config.get("warehouse", ""))
                 if db_config.get("account"):
                     env_vars["MF_DWH_ACCOUNT"] = resolve_env(db_config.get("account", ""))
@@ -189,7 +189,7 @@ class DatusMetricFlowSetup:
                 else:
                     db_path = uri
                 env_vars["MF_DWH_DB"] = os.path.expanduser(db_path)
-                # SQLite doesn't need schema in MetricFlow
+                env_vars["MF_DWH_SCHEMA"] = "default"  # placeholder
             elif db_type == "duckdb":
                 uri = resolve_env(db_config.get("uri", ""))
                 if uri.startswith("duckdb:///"):
@@ -201,7 +201,7 @@ class DatusMetricFlowSetup:
             elif db_type == "bigquery":
                 env_vars["MF_DWH_PROJECT_ID"] = resolve_env(db_config.get("project_id", ""))
                 env_vars["MF_DWH_DB"] = resolve_env(db_config.get("database", ""))
-                env_vars["MF_DWH_SCHEMA"] = resolve_env(db_config.get("schema", ""))
+                env_vars["MF_DWH_SCHEMA"] = resolve_env(db_config.get("schema", "default"))
             elif db_type in ("postgres", "postgresql", "mysql", "starrocks", "clickhouse"):
                 # Generic SQL database configuration
                 # Map database types to MetricFlow dialects
@@ -219,9 +219,7 @@ class DatusMetricFlowSetup:
                 env_vars["MF_DWH_USER"] = resolve_env(db_config.get("username", ""))
                 env_vars["MF_DWH_PASSWORD"] = resolve_env(db_config.get("password", ""))
                 env_vars["MF_DWH_DB"] = resolve_env(db_config.get("database", ""))
-                # Schema is optional for MySQL/StarRocks
-                if db_config.get("schema"):
-                    env_vars["MF_DWH_SCHEMA"] = resolve_env(db_config.get("schema", ""))
+                env_vars["MF_DWH_SCHEMA"] = resolve_env(db_config.get("schema", "default"))
 
         # Set environment variables in current process
         for key, value in env_vars.items():

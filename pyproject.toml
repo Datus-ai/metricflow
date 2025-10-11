@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "datus-metricflow"
-version = "0.1.1rc1"
+version = "0.1.1rc3"
 description = "Simplified MetricFlow integration for Datus Agent - One-command setup for semantic metrics"
 authors = ["Datus.ai <support@datus.ai>", "Transform <hello@transformdata.io>"]
 license = "AGPL-3.0-or-later"
@@ -55,8 +55,8 @@ halo = "^0.0.31"
 update-checker = "^0.18.0"
 "ruamel.yaml" = "^0.17.21"
 rudder-sdk-python = "^1.0.3"
-duckdb-engine = "^0.9.5"
-duckdb = "^1.0.0"
+duckdb-engine = "^0.17.0"
+duckdb = "1.3.0"
 yamllint = "^1.26.3"
 click = ">=7.1.2"
 GitPython = "^3.1.27"

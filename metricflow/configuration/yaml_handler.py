@@ -34,7 +34,7 @@ class YamlFileHandler:
             if not env_value:
                 if key in OPTIONAL_ENV_VARS:
                     return OPTIONAL_ENV_VARS[key]
-                raise ValueError(f"Required environment variable '{env_key}' is not set. Please set it and try again.")
+                raise ValueError(f"Required environment variable {env_key} is not set. Please set it and try again.")
 
             return env_value
 

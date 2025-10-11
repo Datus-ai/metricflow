@@ -23,10 +23,12 @@ logger = logging.getLogger(__name__)
 
 
 class MetricFlowConfig(BaseModel):
-    """MetricFlow configuration model"""
-    project_dir: str = Field(default_factory=lambda: os.path.expanduser("~/.metricflow"))
+    """MetricFlow configuration model.
+
+    Note: Only model_path is actually used by MetricFlow via MF_MODEL_PATH env var.
+    Other configs are kept for reference but not passed to MetricFlow commands.
+    """
     model_path: str = Field(default_factory=lambda: os.path.expanduser("~/.metricflow/semantic_models"))
-    verbose: bool = True
     config_file: str = Field(default_factory=lambda: os.path.expanduser("~/.metricflow/config.yml"))
 
 
@@ -43,11 +45,8 @@ def _run_mf_command(command: List[str]) -> Dict[str, Any]:
         # Set environment variables
         env = os.environ.copy()
         config = MetricFlowConfig()
-        env.update({
-            "MF_PROJECT_DIR": config.project_dir,
-            "MF_VERBOSE": str(config.verbose).lower(),
-            "MF_MODEL_PATH": config.model_path
-        })
+
+        env.update({"MF_MODEL_PATH": config.model_path})
 
         # Run the command
         result = subprocess.run(

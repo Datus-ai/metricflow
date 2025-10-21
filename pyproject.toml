@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "datus-metricflow"
-version = "0.1.1rc3"
+version = "0.1.2"
 description = "Simplified MetricFlow integration for Datus Agent - One-command setup for semantic metrics"
 authors = ["Datus.ai <support@datus.ai>", "Transform <hello@transformdata.io>"]
 license = "AGPL-3.0-or-later"
@@ -20,7 +20,6 @@ classifiers = [
 
 packages = [
     {include = "metricflow"},
-    {include = "datus_mf"},
     {include = "mcp_metricflow"}
 ]
 
@@ -99,7 +98,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 mf = 'metricflow.cli.main:cli'
-datus-mf = 'datus_mf.cli:cli'
 mcp-metricflow = 'mcp_metricflow.cli:main'
 
 [tool.black]

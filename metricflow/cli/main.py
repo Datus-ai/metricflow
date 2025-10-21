@@ -36,7 +36,7 @@ from metricflow.cli.utils import (
     MF_DATABRICKS_KEYS,
 )
 from metricflow.configuration.config_builder import YamlTemplateBuilder
-from metricflow.configuration.constants import ENV_MF_DICT, CONFIG_MODEL_PATH
+from metricflow.configuration.constants import CONFIG_MODEL_PATH
 from metricflow.dataflow.sql_table import SqlTable
 from metricflow.dataflow.dataflow_plan_to_text import dataflow_plan_as_text
 from metricflow.engine.metricflow_engine import MetricFlowQueryRequest, MetricFlowExplainResult, MetricFlowQueryResult
@@ -68,10 +68,15 @@ _telemetry_reporter.add_python_log_handler()
 
 @click.group()
 @click.option("-v", "--verbose", is_flag=True)
+@click.option("--namespace", help="Datus namespace to use for configuration")
 @pass_config
 @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
-def cli(cfg: CLIContext, verbose: bool) -> None:  # noqa: D
+def cli(cfg: CLIContext, verbose: bool, namespace: Optional[str]) -> None:  # noqa: D
     cfg.verbose = verbose
+
+    # Set namespace if provided
+    if namespace:
+        cfg.set_namespace(namespace)
 
     # Cancel queries submitted to the DW if the user precess CTRL + c / process is terminated.
     # Note: docs unclear on the type for the 'frame' argument.
@@ -105,9 +110,13 @@ def version() -> None:
 
 @cli.command()
 @click.option("--restart", is_flag=True, help="Wipe the config file and start over")
+@click.option(
+    "--namespace",
+    help="Namespace from Datus config to use for setup",
+)
 @pass_config
 @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
-def setup(cfg: CLIContext, restart: bool) -> None:
+def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
     """Setup MetricFlow."""
 
     click.echo(
@@ -117,6 +126,39 @@ def setup(cfg: CLIContext, restart: bool) -> None:
             """
         )
     )
+
+    # Handle --namespace option
+    if namespace:
+        from metricflow.configuration.datus_config_handler import DatusConfigHandler
+
+        click.echo(f"📖 Validating configuration for namespace: {namespace}")
+
+        try:
+            # Try to create DatusConfigHandler to validate namespace exists
+            config_handler = DatusConfigHandler(namespace=namespace)
+            db_type = config_handler.db_config.get('type', 'unknown')
+
+            click.echo(f"✅ Found configuration for namespace '{namespace}'")
+            click.echo(f"   Database type: {db_type}")
+
+            # Create necessary directories
+            metricflow_dir = pathlib.Path.home() / ".metricflow"
+            metricflow_dir.mkdir(parents=True, exist_ok=True)
+
+            semantic_models_dir = metricflow_dir / "semantic_models"
+            semantic_models_dir.mkdir(exist_ok=True)
+
+            click.echo("\n✅ Setup validation completed!")
+            click.echo(f"\n💡 Usage: Add --namespace to all mf commands")
+            click.echo(f"\n   Examples:")
+            click.echo(f"     mf --namespace {namespace} list-metrics")
+            click.echo(f"     mf --namespace {namespace} query --metrics revenue --dimensions metric_time")
+            click.echo(f"     mf --namespace {namespace} health-checks")
+            click.echo(f"\n   Note: MetricFlow will read database config directly from Datus agent.yml")
+            return
+        except (FileNotFoundError, ValueError) as e:
+            click.echo(f"❌ {str(e)}")
+            sys.exit(1)
 
     path = pathlib.Path(cfg.config.file_path)
     abs_path = path.absolute()
@@ -243,8 +285,9 @@ def tutorial(ctx: click.core.Context, cfg: CLIContext, msg: bool, skip_dw: bool,
         spinner.succeed("📀 Sample tables have been successfully created into your data warehouse.")
 
     # Seed sample model file
-    if os.getenv(ENV_MF_DICT[CONFIG_MODEL_PATH]):
-        model_path = pathlib.Path(os.getenv(ENV_MF_DICT[CONFIG_MODEL_PATH]))
+    model_path_from_config = cfg.config.get_value(CONFIG_MODEL_PATH)
+    if model_path_from_config:
+        model_path = pathlib.Path(model_path_from_config)
     else:
         model_path = os.path.join(cfg.config.dir_path, "sample_models")
     pathlib.Path(model_path).mkdir(parents=True, exist_ok=True)

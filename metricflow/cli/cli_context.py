@@ -4,6 +4,8 @@ from logging.handlers import TimedRotatingFileHandler
 from typing import Dict, Optional
 
 from metricflow.configuration.config_handler import ConfigHandler
+from metricflow.configuration.datus_config_handler import DatusConfigHandler
+from metricflow.configuration.yaml_handler import YamlFileHandler
 from metricflow.configuration.constants import (
     CONFIG_DBT_CLOUD_JOB_ID,
     CONFIG_DBT_CLOUD_SERVICE_TOKEN,
@@ -44,8 +46,31 @@ class CLIContext:
         self._model_path_is_for_dbt: Optional[bool] = None
         self._use_dbt_cloud: Optional[bool] = None
         self._dbt_cloud_configs: Optional[DbtCloudConfigs] = None
-        self.config = ConfigHandler()
+        self._config_handler: Optional[YamlFileHandler] = None
+        self._namespace: Optional[str] = None
         self._configure_logging()
+
+    def set_namespace(self, namespace: str) -> None:
+        """Set the Datus namespace to use for configuration.
+
+        This must be called before accessing any config-dependent properties.
+        """
+        self._namespace = namespace
+        self._config_handler = None  # Reset to force recreation
+
+    @property
+    def config(self) -> YamlFileHandler:
+        """Get the configuration handler.
+
+        Lazily creates either DatusConfigHandler (if namespace is set) or
+        ConfigHandler (default).
+        """
+        if self._config_handler is None:
+            if self._namespace:
+                self._config_handler = DatusConfigHandler(namespace=self._namespace)
+            else:
+                self._config_handler = ConfigHandler()
+        return self._config_handler
 
     def _configure_logging(self) -> None:  # noqa: D
         log_format = "%(asctime)s %(levelname)s %(filename)s:%(lineno)d [%(threadName)s] - %(message)s"

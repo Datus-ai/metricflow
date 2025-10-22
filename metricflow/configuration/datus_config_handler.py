@@ -179,8 +179,11 @@ class DatusConfigHandler(YamlFileHandler):
             # Default schemas for different DB types
             if db_type == "duckdb":
                 return "main"
-            elif db_type in ("sqlite", "mysql", "starrocks"):
+            elif db_type in ("sqlite", "mysql"):
                 return "default"
+            elif db_type == "starrocks":
+                # For StarRocks, use database as schema since it doesn't have schema concept
+                return self._resolve_env_vars(self.db_config.get("database", ""))
             else:
                 return self._resolve_env_vars(self.db_config.get("schema", ""))
 
@@ -207,3 +210,10 @@ class DatusConfigHandler(YamlFileHandler):
     def file_path(self) -> str:
         """Return dummy config file path."""
         return self._get_dummy_config_path()
+
+    @property
+    def log_file_path(self) -> str:
+        """Return log file path."""
+        log_dir = pathlib.Path.home() / ".metricflow" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        return str(log_dir / "metricflow.log")

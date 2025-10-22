@@ -10,6 +10,7 @@ CONFIG_DWH_DB = "dwh_database"
 CONFIG_DWH_SCHEMA = "dwh_schema"
 CONFIG_DWH_CREDS_PATH = "dwh_path_to_creds"
 CONFIG_DWH_WAREHOUSE = "dwh_warehouse"
+CONFIG_DWH_ACCOUNT = "dwh_account"
 CONFIG_DWH_PROJECT_ID = "dwh_project_id"
 CONFIG_EMAIL = "email"
 CONFIG_MODEL_PATH = "model_path"
@@ -20,22 +21,3 @@ CONFIG_DBT_PROFILE = "dbt_profile"
 CONFIG_DBT_TARGET = "dbt_target"
 CONFIG_DBT_CLOUD_JOB_ID = "dbt_cloud_job_id"
 CONFIG_DBT_CLOUD_SERVICE_TOKEN = "dbt_cloud_service_token"
-
-# ENV constants
-ENV_MF_DICT = {
-    CONFIG_DWH_DIALECT: "MF_DWH_DIALECT",
-    CONFIG_DWH_HOST: "MF_DWH_HOST",
-    CONFIG_DWH_PORT: "MF_DWH_PORT",
-    CONFIG_DWH_USER: "MF_DWH_USER",
-    CONFIG_DWH_PASSWORD: "MF_DWH_PASSWORD",
-    CONFIG_DWH_DB: "MF_DWH_DB",
-    CONFIG_DWH_SCHEMA: "MF_DWH_SCHEMA",
-    CONFIG_DWH_WAREHOUSE: "MF_DWH_WAREHOUSE",
-    CONFIG_MODEL_PATH: "MF_MODEL_PATH",
-    CONFIG_EMAIL: "MF_EMAIL",
-}
-
-# Optional environment variables with default values
-OPTIONAL_ENV_VARS = {
-    CONFIG_EMAIL: "",  # Default to empty string if not set
-}

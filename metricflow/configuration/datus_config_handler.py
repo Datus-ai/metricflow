@@ -25,8 +25,9 @@ from metricflow.configuration.yaml_handler import YamlFileHandler
 class DatusConfigHandler(YamlFileHandler):
     """Config handler that reads from Datus agent.yml configuration."""
 
-    def __init__(self, namespace: str) -> None:
+    def __init__(self, namespace: str, config_path: Optional[str] = None) -> None:
         self.namespace = namespace
+        self.config_path = config_path
         self.datus_config = self._load_datus_config()
         self.db_config = self._get_namespace_db_config()
 
@@ -42,22 +43,36 @@ class DatusConfigHandler(YamlFileHandler):
     def _load_datus_config(self) -> Dict[str, Any]:
         """Load Datus agent configuration file.
 
-        Priority: ~/.datus/conf/agent.yml > ./conf/agent.yml
+        Priority:
+        1. Explicit config_path parameter (if provided)
+        2. ./conf/agent.yml (current directory)
+        3. ~/.datus/conf/agent.yml (home directory)
         """
-        home_config = pathlib.Path.home() / ".datus" / "conf" / "agent.yml"
-        local_config = pathlib.Path("conf/agent.yml")
+        resolved_config_path = None
 
-        config_path = None
-        if home_config.exists():
-            config_path = home_config
-        elif local_config.exists():
-            config_path = local_config
+        # 1. Check explicit config path
+        if self.config_path:
+            explicit_path = pathlib.Path(self.config_path).expanduser()
+            if explicit_path.exists():
+                resolved_config_path = explicit_path
+            else:
+                raise FileNotFoundError(f"Agent configuration file not found: {explicit_path}")
         else:
-            raise FileNotFoundError(
-                "Datus config not found. Expected at ~/.datus/conf/agent.yml or ./conf/agent.yml"
-            )
+            # 2. Check current directory
+            local_config = pathlib.Path("conf/agent.yml")
+            if local_config.exists():
+                resolved_config_path = local_config
+            # 3. Check user home directory
+            else:
+                home_config = pathlib.Path.home() / ".datus" / "conf" / "agent.yml"
+                if home_config.exists():
+                    resolved_config_path = home_config
+                else:
+                    raise FileNotFoundError(
+                        "Datus config not found. Expected at ./conf/agent.yml or ~/.datus/conf/agent.yml"
+                    )
 
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(resolved_config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
 
         return config
@@ -102,22 +117,25 @@ class DatusConfigHandler(YamlFileHandler):
         return value_str
 
     def _get_model_path_from_datus_config(self) -> str:
-        """Get semantic models path from Datus config.
+        """Get semantic models path for the namespace.
 
-        Reads from agent.storage.base_path and appends /semantic_models.
-        Falls back to ~/.metricflow/semantic_models if not found.
+        Returns:
+            Path: {datus_home}/semantic_models/{namespace}
+
+        The datus_home is determined from agent.home config.
+        If not configured, defaults to ~/.datus
         """
-        storage_config = self.datus_config.get("agent", {}).get("storage", {})
-        base_path = storage_config.get("base_path", "")
+        # Get datus home from agent.home config
+        agent_home = self.datus_config.get("agent", {}).get("home", "")
+        if agent_home:
+            datus_home = pathlib.Path(agent_home).expanduser().resolve()
+        else:
+            datus_home = pathlib.Path.home() / ".datus"
 
-        if base_path:
-            expanded_path = os.path.expanduser(base_path)
-            expanded_path = os.path.expandvars(expanded_path)
-            model_path = os.path.join(expanded_path, "semantic_models")
-            return model_path
+        # Construct semantic models path: {datus_home}/semantic_models/{namespace}
+        model_path = datus_home / "semantic_models" / self.namespace
 
-        # Default fallback
-        return str(pathlib.Path.home() / ".metricflow" / "semantic_models")
+        return str(model_path)
 
     def get_value(self, key: str) -> Optional[str]:
         """Get configuration value by mapping Datus config to MetricFlow keys."""

@@ -48,7 +48,16 @@ class CLIContext:
         self._dbt_cloud_configs: Optional[DbtCloudConfigs] = None
         self._config_handler: Optional[YamlFileHandler] = None
         self._namespace: Optional[str] = None
+        self._config_path: Optional[str] = None
         self._configure_logging()
+
+    def set_config_path(self, config_path: str) -> None:
+        """Set the path to the Datus configuration file.
+
+        This must be called before accessing any config-dependent properties.
+        """
+        self._config_path = config_path
+        self._config_handler = None  # Reset to force recreation
 
     def set_namespace(self, namespace: str) -> None:
         """Set the Datus namespace to use for configuration.
@@ -67,7 +76,10 @@ class CLIContext:
         """
         if self._config_handler is None:
             if self._namespace:
-                self._config_handler = DatusConfigHandler(namespace=self._namespace)
+                self._config_handler = DatusConfigHandler(
+                    namespace=self._namespace,
+                    config_path=self._config_path
+                )
             else:
                 self._config_handler = ConfigHandler()
         return self._config_handler

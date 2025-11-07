@@ -69,12 +69,15 @@ _telemetry_reporter.add_python_log_handler()
 @click.group()
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("--namespace", help="Datus namespace to use for configuration")
+@click.option("--config", help="Path to Datus agent configuration file")
 @pass_config
 @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
-def cli(cfg: CLIContext, verbose: bool, namespace: Optional[str]) -> None:  # noqa: D
+def cli(cfg: CLIContext, verbose: bool, namespace: Optional[str], config: Optional[str]) -> None:  # noqa: D
     cfg.verbose = verbose
 
-    # Set namespace if provided
+    # Set config path and namespace if provided
+    if config:
+        cfg.set_config_path(config)
     if namespace:
         cfg.set_namespace(namespace)
 

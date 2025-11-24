@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "datus-metricflow"
-version = "0.1.4rc1"
+version = "0.1.5"
 description = "Simplified MetricFlow integration for Datus Agent - One-command setup for semantic metrics"
 authors = ["Datus.ai <support@datus.ai>", "Transform <hello@transformdata.io>"]
 license = "AGPL-3.0-or-later"
@@ -47,7 +47,7 @@ sqlalchemy-bigquery = "^1.9.0"
 python-dateutil = "^2.8.2"
 requests = "^2.27.1"
 MarkupSafe = "^2.1.0"
-psycopg2 = "^2.9.3"
+psycopg2-binary = {version = "^2.9.3", optional = true}
 google-auth = "^2.35.0"
 google-cloud-bigquery = "^3.25.0"
 halo = "^0.0.31"
@@ -78,6 +78,7 @@ pytest = "^7.1.1"
 pre-commit = "^2.18.0"
 
 [tool.poetry.extras]
+postgres = ["psycopg2-binary", "dbt-postgres"]
 dbt-snowflake = ["dbt-snowflake"]
 dbt-postgres = ["dbt-postgres"]
 dbt-bigquery = ["dbt-bigquery"]

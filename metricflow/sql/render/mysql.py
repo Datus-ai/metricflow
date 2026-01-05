@@ -7,6 +7,7 @@ from metricflow.sql.render.expr_renderer import (
 from metricflow.sql.render.sql_plan_renderer import DefaultSqlQueryPlanRenderer
 from metricflow.sql.sql_bind_parameters import SqlBindParameters
 from metricflow.sql.sql_exprs import (
+    SqlCastToTimestampExpression,
     SqlGenerateUuidExpression,
     SqlPercentileExpression,
     SqlPercentileFunctionType,
@@ -22,6 +23,14 @@ class MySQLSqlExpressionRenderer(DefaultSqlExpressionRenderer):
     def double_data_type(self) -> str:
         """Custom double data type for the MySQL engine"""
         return "DOUBLE"
+
+    def visit_cast_to_timestamp_expr(self, node: SqlCastToTimestampExpression) -> SqlExpressionRenderResult:  # noqa: D
+        """Render CAST to timestamp for MySQL/StarRocks using DATETIME type"""
+        arg_rendered = self.render_sql_expr(node.arg)
+        return SqlExpressionRenderResult(
+            sql=f"CAST({arg_rendered.sql} AS DATETIME)",
+            execution_parameters=arg_rendered.execution_parameters,
+        )
 
     def visit_time_delta_expr(self, node: SqlTimeDeltaExpression) -> SqlExpressionRenderResult:  # noqa: D
         arg_rendered = node.arg.accept(self)

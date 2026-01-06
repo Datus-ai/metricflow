@@ -47,7 +47,7 @@ sqlalchemy-bigquery = "^1.9.0"
 python-dateutil = "^2.8.2"
 requests = "^2.27.1"
 MarkupSafe = "^2.1.0"
-psycopg2-binary = {version = "^2.9.3", optional = true}
+psycopg2-binary = "^2.9.3"
 google-auth = "^2.35.0"
 google-cloud-bigquery = "^3.25.0"
 halo = "^0.0.31"
@@ -78,7 +78,6 @@ pytest = "^7.1.1"
 pre-commit = "^2.18.0"
 
 [tool.poetry.extras]
-postgres = ["psycopg2-binary", "dbt-postgres"]
 dbt-snowflake = ["dbt-snowflake"]
 dbt-postgres = ["dbt-postgres"]
 dbt-bigquery = ["dbt-bigquery"]

@@ -42,7 +42,7 @@ from metricflow.plan_conversion.dataflow_to_sql import DataflowToSqlQueryPlanCon
 from metricflow.plan_conversion.time_spine import TimeSpineSource, TimeSpineTableBuilder
 from metricflow.protocols.async_sql_client import AsyncSqlClient
 from metricflow.query.query_parser import MetricFlowQueryParser
-from metricflow.references import MetricReference
+from metricflow.references import DimensionReference, MetricReference
 from metricflow.specs import ColumnAssociationResolver, MetricFlowQuerySpec
 from metricflow.sql.optimizer.optimization_levels import SqlQueryOptimizationLevel
 from metricflow.sql_clients.common_client import not_empty
@@ -495,19 +495,28 @@ class MetricFlowEngine(AbstractMetricFlowEngine):
         return self._create_execution_plan(mf_request)
 
     def simple_dimensions_for_metrics(self, metric_names: List[str]) -> List[Dimension]:  # noqa: D
-        return [
-            Dimension(name=dim.qualified_name)
-            for dim in self._semantic_model.metric_semantics.element_specs_for_metrics(
-                metric_references=[MetricReference(element_name=mname) for mname in metric_names],
-                without_any_property=frozenset(
-                    {
-                        LinkableElementProperties.IDENTIFIER,
-                        LinkableElementProperties.DERIVED_TIME_GRANULARITY,
-                        LinkableElementProperties.LOCAL_LINKED,
-                    }
-                ),
-            )
-        ]
+        result = []
+        for dim in self._semantic_model.metric_semantics.element_specs_for_metrics(
+            metric_references=[MetricReference(element_name=mname) for mname in metric_names],
+            without_any_property=frozenset(
+                {
+                    LinkableElementProperties.IDENTIFIER,
+                    LinkableElementProperties.DERIVED_TIME_GRANULARITY,
+                    LinkableElementProperties.LOCAL_LINKED,
+                }
+            ),
+        ):
+            # Get the description from the original dimension definition
+            description = None
+            try:
+                dim_ref = DimensionReference(element_name=dim.element_name)
+                original_dim = self._semantic_model.data_source_semantics.get_dimension(dim_ref)
+                description = original_dim.description
+            except (ValueError, KeyError):
+                # Dimension not found in data source semantics, leave description as None
+                pass
+            result.append(Dimension(name=dim.qualified_name, description=description))
+        return result
 
     @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
     def list_materializations(self) -> List[Materialization]:  # noqa: D

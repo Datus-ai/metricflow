@@ -19,6 +19,7 @@ class Dimension:
     """Dataclass representation of a Dimension."""
 
     name: str
+    description: Optional[str] = None
 
 
 @dataclass(frozen=True)

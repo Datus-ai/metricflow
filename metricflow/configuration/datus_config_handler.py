@@ -191,7 +191,8 @@ class DatusConfigHandler(YamlFileHandler):
                 return self._resolve_env_vars(self.db_config.get("database", ""))
 
         if key == CONFIG_DWH_SCHEMA:
-            schema = self.db_config.get("schema")
+            # Support both "schema" and "schema_name" field names for compatibility
+            schema = self.db_config.get("schema") or self.db_config.get("schema_name")
             if schema:
                 return self._resolve_env_vars(schema)
             # Default schemas for different DB types
@@ -202,8 +203,10 @@ class DatusConfigHandler(YamlFileHandler):
             elif db_type == "starrocks":
                 # For StarRocks, use database as schema since it doesn't have schema concept
                 return self._resolve_env_vars(self.db_config.get("database", ""))
+            elif db_type in ("postgres", "postgresql"):
+                return "public"
             else:
-                return self._resolve_env_vars(self.db_config.get("schema", ""))
+                return self._resolve_env_vars(self.db_config.get("schema") or self.db_config.get("schema_name") or "")
 
         # Snowflake-specific
         if key == CONFIG_DWH_WAREHOUSE:

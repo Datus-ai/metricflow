@@ -135,7 +135,7 @@ def parse_yaml_file_paths_to_model(
     for file_path in file_paths:
         try:
             with open(file_path) as f:
-                contents = Template(f.read()).substitute(template_mapping)
+                contents = Template(f.read()).safe_substitute(template_mapping)
                 yaml_config_files.append(
                     YamlConfigFile(filepath=file_path, contents=contents),
                 )

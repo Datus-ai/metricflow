@@ -8,6 +8,7 @@ from metricflow.sql.render.sql_plan_renderer import DefaultSqlQueryPlanRenderer
 from metricflow.sql.sql_bind_parameters import SqlBindParameters
 from metricflow.sql.sql_exprs import (
     SqlCastToTimestampExpression,
+    SqlDateTruncExpression,
     SqlGenerateUuidExpression,
     SqlPercentileExpression,
     SqlPercentileFunctionType,
@@ -29,6 +30,30 @@ class MySQLSqlExpressionRenderer(DefaultSqlExpressionRenderer):
         arg_rendered = self.render_sql_expr(node.arg)
         return SqlExpressionRenderResult(
             sql=f"CAST({arg_rendered.sql} AS DATETIME)",
+            execution_parameters=arg_rendered.execution_parameters,
+        )
+
+    def visit_date_trunc_expr(self, node: SqlDateTruncExpression) -> SqlExpressionRenderResult:  # noqa: D
+        """Render DATE_TRUNC for MySQL using DATE/DATE_FORMAT functions"""
+        arg_rendered = self.render_sql_expr(node.arg)
+
+        if node.time_granularity == TimeGranularity.DAY:
+            sql = f"DATE({arg_rendered.sql})"
+        elif node.time_granularity == TimeGranularity.WEEK:
+            # Get Monday of the week
+            sql = f"DATE_SUB(DATE({arg_rendered.sql}), INTERVAL WEEKDAY({arg_rendered.sql}) DAY)"
+        elif node.time_granularity == TimeGranularity.MONTH:
+            sql = f"DATE_FORMAT({arg_rendered.sql}, '%Y-%m-01')"
+        elif node.time_granularity == TimeGranularity.QUARTER:
+            sql = f"DATE_SUB(DATE_FORMAT({arg_rendered.sql}, '%Y-%m-01'), INTERVAL (MONTH({arg_rendered.sql}) - 1) % 3 MONTH)"
+        elif node.time_granularity == TimeGranularity.YEAR:
+            sql = f"DATE_FORMAT({arg_rendered.sql}, '%Y-01-01')"
+        else:
+            # Default to day granularity
+            sql = f"DATE({arg_rendered.sql})"
+
+        return SqlExpressionRenderResult(
+            sql=sql,
             execution_parameters=arg_rendered.execution_parameters,
         )
 

@@ -33,17 +33,17 @@ class MaterializationDestination(HashableBaseModel):
 
     location: MaterializationLocation
     format: MaterializationFormat
-    rollups: Optional[List[List[str]]]
-    tableau_params: Optional[MaterializationTableauParams]
+    rollups: Optional[List[List[str]]] = None
+    tableau_params: Optional[MaterializationTableauParams] = None
 
 
 class Materialization(HashableBaseModel, ModelWithMetadataParsing):
     """Describes a materialization"""
 
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     metrics: List[str]
     dimensions: List[str]
-    destinations: Optional[List[MaterializationDestination]]
-    destination_table: Optional[SqlTable]
-    metadata: Optional[Metadata]
+    destinations: Optional[List[MaterializationDestination]] = None
+    destination_table: Optional[SqlTable] = None
+    metadata: Optional[Metadata] = None

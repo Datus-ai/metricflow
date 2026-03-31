@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from unittest.mock import patch, MagicMock
 
 from metricflow.cli.cli_context import CLIContext
@@ -49,7 +49,8 @@ def test_get_dimension_values(cli_runner: MetricFlowCliRunner) -> None:  # noqa:
     resp = cli_runner.run(get_dimension_values, args=["--metric-name", "bookings", "--dimension-name", "is_instant"])
 
     actual_output_lines = sorted(resp.output.split("\n"))
-    assert ["", "• False", "• True"] == actual_output_lines
+    # DuckDB returns booleans as 0/1, other engines as False/True
+    assert actual_output_lines in (["", "• False", "• True"], ["", "• 0", "• 1"])
     assert resp.exit_code == 0
 
 
@@ -82,7 +83,7 @@ def test_validate_configs(cli_runner: MetricFlowCliRunner) -> None:  # noqa: D
     # Mock validation errors in validate_model function
     issues = (
         ValidationWarning(context=None, message="warning_message"),  # type: ignore
-        ValidationFutureError(context=None, message="future_error_message", error_date=datetime.now()),  # type: ignore
+        ValidationFutureError(context=None, message="future_error_message", error_date=date.today()),  # type: ignore
         ValidationError(context=None, message="error_message"),  # type: ignore
     )
     mocked_build_result = MagicMock(issues=ModelValidationResults.from_issues_sequence(issues))
@@ -101,7 +102,7 @@ def test_future_errors_and_warnings_conditionally_show_up(cli_runner: MetricFlow
     # Mock validation errors in validate_model function
     issues = (
         ValidationWarning(context=None, message="warning_message"),  # type: ignore
-        ValidationFutureError(context=None, message="future_error_message", error_date=datetime.now()),  # type: ignore
+        ValidationFutureError(context=None, message="future_error_message", error_date=date.today()),  # type: ignore
         ValidationError(context=None, message="error_message"),  # type: ignore
     )
     mocked_build_result = MagicMock(issues=ModelValidationResults.from_issues_sequence(issues))

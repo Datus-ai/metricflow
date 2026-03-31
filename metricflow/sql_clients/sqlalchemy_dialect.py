@@ -137,6 +137,7 @@ class SqlAlchemySqlClient(BaseSqlClientImplementation, ABC):
             self._engine, isolation_level=isolation_level, system_tags=system_tags, extra_tags=extra_tags
         ) as conn:
             conn.execute(sqlalchemy.text(stmt), bind_params.param_dict)
+            conn.commit()
 
     def _engine_specific_dry_run_implementation(self, stmt: str, bind_params: SqlBindParameters) -> None:  # noqa: D
         with self._engine_connection(self._engine) as conn:

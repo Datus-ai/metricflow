@@ -89,6 +89,9 @@ def collect_yaml_config_file_paths(directory: str) -> List[str]:
             file_path = os.path.join(root, file)
             config_file_paths.append(file_path)
 
+    if not config_file_paths:
+        return config_file_paths
+
     try:
         repo = git.Repo(directory, search_parent_directories=True)
         # repo.ignored returns a list of file paths which are the file paths

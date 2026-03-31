@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from metricflow.errors.errors import ParsingException
 from metricflow.model.objects.common import Metadata
 from metricflow.model.objects.constraints.where import WhereClauseConstraint
@@ -38,6 +38,13 @@ class MetricInputMeasure(HashableBaseModel, PydanticCustomInputParser):
     name: str
     constraint: Optional[WhereClauseConstraint] = None
     alias: Optional[str] = None
+
+    @field_validator('constraint', mode='before')
+    @classmethod
+    def parse_constraint_input(cls, v):
+        if isinstance(v, str):
+            return WhereClauseConstraint.parse(v)
+        return v
 
     @classmethod
     def _from_yaml_value(cls, input: PydanticParseableValueType) -> MetricInputMeasure:
@@ -129,6 +136,20 @@ class MetricInput(HashableBaseModel):
     alias: Optional[str] = None
     offset_window: Optional[MetricTimeWindow] = None
     offset_to_grain: Optional[TimeGranularity] = None
+
+    @field_validator('constraint', mode='before')
+    @classmethod
+    def parse_constraint_input(cls, v):
+        if isinstance(v, str):
+            return WhereClauseConstraint.parse(v)
+        return v
+
+    @field_validator('offset_window', mode='before')
+    @classmethod
+    def parse_offset_window_input(cls, v):
+        if isinstance(v, str):
+            return MetricTimeWindow.parse(v)
+        return v
 
 
 class MetricTypeParams(HashableBaseModel):

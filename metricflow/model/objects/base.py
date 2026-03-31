@@ -5,7 +5,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Callable, ClassVar, Generic, Iterator, TypeVar
 
-from pydantic import BaseModel, ConfigDict, root_validator
+from pydantic import BaseModel, ConfigDict, root_validator, model_validator
 
 from metricflow.errors.errors import ParsingException
 from metricflow.model.parsing.yaml_loader import ParsingContext, PARSING_CONTEXT_KEY
@@ -113,9 +113,23 @@ class PydanticCustomInputParser(ABC, Generic[ModelObjectT_co]):
     and validation of that model object itself.
     """
 
+    @model_validator(mode='wrap')
+    @classmethod
+    def _pydantic_v2_custom_parse(cls, value, handler):
+        """Pydantic v2 wrap validator for custom input parsing.
+
+        Handles string and other non-dict/non-instance inputs by delegating to _from_yaml_value.
+        """
+        if isinstance(value, dict):
+            return handler(value)
+        elif isinstance(value, cls):
+            return value
+        else:
+            return cls._from_yaml_value(value)
+
     @classmethod
     def __get_validators__(cls) -> Iterator[Callable]:
-        """Pydantic magic method for allowing parsing of arbitrary input on parse_obj invocation
+        """Pydantic v1 magic method for allowing parsing of arbitrary input on parse_obj invocation
 
         This allow for parsing and validation prior to object initialization. Most classes implementing this
         interface in our model are doing so because the input value from user-supplied YAML will be a string

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import field_validator
+from pydantic import model_validator
 from typing import Any, Optional, List
 
 from metricflow.model.objects.base import HashableBaseModel, ModelWithMetadataParsing
@@ -43,29 +43,13 @@ class Identifier(HashableBaseModel, ModelWithMetadataParsing):
     expr: Optional[str] = None
     metadata: Optional[Metadata] = None
 
-    @field_validator("entity", mode="before")
+    @model_validator(mode='before')
     @classmethod
-    def default_entity_value(cls, value: Any, info) -> str:  # type: ignore[misc]
-        """Defaulting the value of the identifier 'entity' value using pydantic validator
-
-        If an entity value is provided that is a string, that will become the value of
-        entity. If the provifed entity value is None, the entity value becomes the
-        element_name representation of the identifier's name.
-        """
-
-        if value is None:
-            if hasattr(info, 'data') and "name" in info.data:
-                value = info.data["name"]
-            elif hasattr(info, 'context') and info.context and "name" in info.context:
-                value = info.context["name"]
-            else:
-                # If we can't get the name, we'll return None and let the default handle it
-                return None
-
-        # guarantee value is string
-        if value is not None and not isinstance(value, str):
-            raise ValueError(f"Entity value should be a string (str) type, but got {type(value)} with value: {value}")
-        return value
+    def default_entity_value(cls, values: Any) -> Any:
+        """Default entity to name when not provided."""
+        if isinstance(values, dict) and values.get('entity') is None and 'name' in values:
+            values['entity'] = values['name']
+        return values
 
     @property
     def is_primary_time(self) -> bool:  # noqa: D

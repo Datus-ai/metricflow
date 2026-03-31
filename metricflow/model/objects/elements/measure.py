@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional, List
+from pydantic import field_validator
 from metricflow.aggregation_properties import AggregationType
 from metricflow.model.objects.common import Metadata
 from metricflow.model.objects.base import ModelWithMetadataParsing, HashableBaseModel
@@ -39,6 +40,13 @@ class Measure(HashableBaseModel, ModelWithMetadataParsing):
     agg_params: Optional[MeasureAggregationParameters] = None
     metadata: Optional[Metadata] = None
     non_additive_dimension: Optional[NonAdditiveDimensionParameters] = None
+
+    @field_validator('expr', mode='before')
+    @classmethod
+    def coerce_expr_to_str(cls, v):
+        if v is not None and not isinstance(v, str):
+            return str(v)
+        return v
 
     # Defines the time dimension to aggregate this measure by. If not specified, it means to use the primary time
     # dimension in the data source.

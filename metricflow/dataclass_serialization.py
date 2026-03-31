@@ -202,7 +202,7 @@ class DataclassSerializer:
                 field_values[field_name] = self._convert_dataclass_instance_to_pydantic_model(
                     object_type=field_definition.annotated_field_type, obj=getattr(obj, field_name)
                 )
-            return PydanticModel(**field_values)
+            return PydanticModel.model_construct(**field_values)
 
         return obj
 
@@ -213,7 +213,7 @@ class DataclassSerializer:
             # .__class__ seems to be the approach for new classes and there are differences with type(obj)
             object_type=obj.__class__,
             obj=obj,
-        ).json()
+        ).model_dump_json()
 
 
 class DataClassDeserializer:
@@ -276,7 +276,7 @@ class DataClassDeserializer:
         try:
             ClassAsPydantic = self._to_pydantic_type_converter.to_pydantic_type(dataclass_type)
             logger.debug(f"Serialized object for creation of {ClassAsPydantic} is {serialized_obj}")
-            pydantic_object = ClassAsPydantic.parse_raw(serialized_obj)
+            pydantic_object = ClassAsPydantic.model_validate_json(serialized_obj)
             return self._construct_dataclass_from_pydantic_object(
                 dataclass_type=dataclass_type,
                 obj=pydantic_object,

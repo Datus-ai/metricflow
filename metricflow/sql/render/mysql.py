@@ -41,7 +41,8 @@ class MySQLSqlExpressionRenderer(DefaultSqlExpressionRenderer):
             sql = f"DATE({arg_rendered.sql})"
         elif node.time_granularity == TimeGranularity.WEEK:
             # Get Monday of the week
-            sql = f"DATE_SUB(DATE({arg_rendered.sql}), INTERVAL WEEKDAY({arg_rendered.sql}) DAY)"
+            # Use (DAYOFWEEK(x) + 5) % 7 instead of WEEKDAY(x) for StarRocks compatibility
+            sql = f"DATE_SUB(DATE({arg_rendered.sql}), INTERVAL (DAYOFWEEK({arg_rendered.sql}) + 5) % 7 DAY)"
         elif node.time_granularity == TimeGranularity.MONTH:
             sql = f"DATE_FORMAT({arg_rendered.sql}, '%Y-%m-01')"
         elif node.time_granularity == TimeGranularity.QUARTER:
@@ -68,7 +69,7 @@ class MySQLSqlExpressionRenderer(DefaultSqlExpressionRenderer):
                 )
             elif node.granularity == TimeGranularity.WEEK:
                 return SqlExpressionRenderResult(
-                    sql=f"DATE_SUB({arg_rendered.sql}, INTERVAL WEEKDAY({arg_rendered.sql}) DAY)",
+                    sql=f"DATE_SUB({arg_rendered.sql}, INTERVAL (DAYOFWEEK({arg_rendered.sql}) + 5) % 7 DAY)",
                     execution_parameters=arg_rendered.execution_parameters,
                 )
             elif node.granularity == TimeGranularity.MONTH:

@@ -1,0 +1,19 @@
+---
+data_source:
+  name: fifth_hop_table
+  description: fifth_hop_table
+  owners:
+    - support@transformdata.io
+
+  sql_table: $fifth_hop_table
+
+  dimensions:
+    - name: fifth_hop_value
+      type: categorical
+
+  identifiers:
+    - name: fifth_hop_id
+      type: primary
+
+  mutability:
+    type: immutable

@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Generic, Sequence, List, TypeVar, Optional, Set
+from typing import Generic, Sequence, List, TypeVar, Optional, Set, Tuple
 
 from metricflow.constraints.time_constraint import TimeRangeConstraint
 from metricflow.dataflow.builder.node_data_set import DataflowPlanNodeOutputDataSetResolver
@@ -12,7 +12,7 @@ from metricflow.dataflow.dataflow_plan import (
     FilterElementsNode,
     JoinDescription,
 )
-from metricflow.model.semantics.data_source_join_evaluator import DataSourceJoinEvaluator, MAX_JOIN_HOPS
+from metricflow.model.semantics.data_source_join_evaluator import DataSourceJoinEvaluator
 from metricflow.object_utils import pformat_big_objects
 from metricflow.plan_conversion.sql_dataset import SqlDataSet
 from metricflow.protocols.semantics import DataSourceSemanticsAccessor
@@ -30,20 +30,24 @@ logger = logging.getLogger(__name__)
 class MultiHopJoinCandidateLineage(Generic[SqlDataSetT]):
     """Describes how the multi-hop join candidate was formed.
 
-    For example, if
+    For a 2-hop join (account_id__customer_id__customer_name):
     * bridge_source has the primary identifier account_id and the foreign identifier customer_id
-    * customers_source has the primary identifier customer_id and dimension country
-    * transactions_source has the transactions measure and the account_id foreign identifier
+    * customers_source has the primary identifier customer_id and dimension customer_name
 
-    Then the candidate lineage can be describe as
-        first_node_to_join = bridge_source
-        second_node_to_join = customers_source
-    to get the country dimension.
+    Lineage: source_nodes_in_chain = (bridge_source, customers_source)
+             join_by_identifiers = (LinklessIdentifierSpec("customer_id"),)
+
+    For a 3-hop join (a__b__c__dim):
+    * bridge1 has identifiers a and b
+    * bridge2 has identifiers b and c
+    * target has identifier c and dimension dim
+
+    Lineage: source_nodes_in_chain = (bridge1, bridge2, target)
+             join_by_identifiers = (LinklessIdentifierSpec("c"), LinklessIdentifierSpec("b"))
     """
 
-    first_node_to_join: BaseOutput[SqlDataSetT]
-    second_node_to_join: BaseOutput[SqlDataSetT]
-    join_second_node_by_identifier: LinklessIdentifierSpec
+    source_nodes_in_chain: Tuple[BaseOutput[SqlDataSetT], ...]
+    join_by_identifiers: Tuple[LinklessIdentifierSpec, ...]
 
 
 @dataclass(frozen=True)
@@ -155,117 +159,131 @@ class PreDimensionJoinNodeProcessor(Generic[SqlDataSetT]):
         desired_linkable_spec: LinkableInstanceSpec,
         nodes: Sequence[BaseOutput[SqlDataSetT]],
     ) -> Sequence[MultiHopJoinCandidate]:
-        """Assemble nodes representing all possible one-hop joins"""
+        """Assemble nodes representing all possible multi-hop join paths.
 
-        if len(desired_linkable_spec.identifier_links) > MAX_JOIN_HOPS:
-            raise NotImplementedError(
-                f"Multi-hop joins with more than {MAX_JOIN_HOPS} identifier links not yet supported. "
-                f"Got: {desired_linkable_spec}"
-            )
-        if len(desired_linkable_spec.identifier_links) != 2:
+        For a desired linkable spec with N identifier links (N >= 2), this builds
+        composite nodes by iteratively joining source nodes from right to left.
+
+        For identifier_links = [l0, l1, ..., l_{n-1}] and target element e:
+        1. Find source nodes containing l_{n-1} and element e (leaf nodes)
+        2. Find bridge nodes with l_{n-2} and l_{n-1}, join with leaf nodes on l_{n-1}
+        3. Continue until the composite has l0 and can be joined to the measure node.
+        """
+        n_links = len(desired_linkable_spec.identifier_links)
+        if n_links < 2:
             return ()
 
         multi_hop_join_candidates: List[MultiHopJoinCandidate] = []
-        logger.info(f"Creating nodes for {desired_linkable_spec}")
+        logger.info(f"Creating multi-hop nodes for {desired_linkable_spec} ({n_links} hops)")
 
-        for first_node_that_could_be_joined in nodes:
-            data_set_of_first_node_that_could_be_joined = self._node_data_set_resolver.get_output_data_set(
-                first_node_that_could_be_joined
-            )
+        last_link_ref = desired_linkable_spec.identifier_links[-1]
 
-            # When joining on the identifier, the first node needs the first and second identifier links.
-            if not (
-                self._node_contains_identifier(
-                    node=first_node_that_could_be_joined,
-                    identifier_reference=desired_linkable_spec.identifier_links[0],
-                )
-                and self._node_contains_identifier(
-                    node=first_node_that_could_be_joined,
-                    identifier_reference=desired_linkable_spec.identifier_links[1],
-                )
-            ):
+        # Step 0: Find initial leaf nodes containing the last identifier and target element.
+        # Each candidate is (node, source_nodes_used, join_identifiers_used).
+        current_candidates: List[Tuple[
+            BaseOutput[SqlDataSetT],
+            Tuple[BaseOutput[SqlDataSetT], ...],
+            Tuple[LinklessIdentifierSpec, ...],
+        ]] = []
+
+        for node in nodes:
+            if not self._node_contains_identifier(node=node, identifier_reference=last_link_ref):
                 continue
 
-            for second_node_that_could_be_joined in nodes:
+            data_set = self._node_data_set_resolver.get_output_data_set(node)
+            element_names_in_data_set = ToElementNameSet().transform(data_set.instance_set.spec_set)
+            if desired_linkable_spec.element_name not in element_names_in_data_set:
+                continue
+
+            current_candidates.append((node, (node,), ()))
+
+        # Iteratively build composites from right to left.
+        # At each step, we find bridge nodes that connect the current chain one hop further left.
+        for step in range(n_links - 2, -1, -1):
+            bridge_link_ref = desired_linkable_spec.identifier_links[step]
+            join_link_ref = desired_linkable_spec.identifier_links[step + 1]
+            join_link_spec = LinklessIdentifierSpec.from_reference(join_link_ref)
+
+            next_candidates: List[Tuple[
+                BaseOutput[SqlDataSetT],
+                Tuple[BaseOutput[SqlDataSetT], ...],
+                Tuple[LinklessIdentifierSpec, ...],
+            ]] = []
+
+            for bridge_node in nodes:
+                # Bridge node must have both the current link and the next link.
                 if not (
-                    self._node_contains_identifier(
-                        node=second_node_that_could_be_joined,
-                        identifier_reference=desired_linkable_spec.identifier_links[1],
+                    self._node_contains_identifier(node=bridge_node, identifier_reference=bridge_link_ref)
+                    and self._node_contains_identifier(node=bridge_node, identifier_reference=join_link_ref)
+                ):
+                    continue
+
+                for right_node, used_source_nodes, join_identifiers in current_candidates:
+                    # Avoid cycles: don't reuse the same source node.
+                    if bridge_node.node_id == right_node.node_id or any(
+                        bridge_node.node_id == used.node_id for used in used_source_nodes
+                    ):
+                        continue
+
+                    data_set_of_bridge = self._node_data_set_resolver.get_output_data_set(bridge_node)
+                    data_set_of_right = self._node_data_set_resolver.get_output_data_set(right_node)
+
+                    if not self._join_evaluator.is_valid_instance_set_join(
+                        left_instance_set=data_set_of_bridge.instance_set,
+                        right_instance_set=data_set_of_right.instance_set,
+                        on_identifier_reference=join_link_ref,
+                    ):
+                        continue
+
+                    # Filter right node to only keep linkable specs (exclude measures).
+                    specs = data_set_of_right.instance_set.spec_set
+                    filtered_right_node = FilterElementsNode(
+                        parent_node=right_node,
+                        include_specs=InstanceSpecSet.create_from_linkable_specs(
+                            specs.dimension_specs + specs.identifier_specs + specs.time_dimension_specs
+                        ),
                     )
-                ):
-                    continue
 
-                # Avoid loops between the same data sources.
-                if second_node_that_could_be_joined.node_id == first_node_that_could_be_joined.node_id:
-                    continue
+                    join_on_partition_dimensions = self._partition_resolver.resolve_partition_dimension_joins(
+                        start_node_spec_set=data_set_of_bridge.instance_set.spec_set,
+                        node_to_join_spec_set=data_set_of_right.instance_set.spec_set,
+                    )
+                    join_on_partition_time_dimensions = self._partition_resolver.resolve_partition_time_dimension_joins(
+                        start_node_spec_set=data_set_of_bridge.instance_set.spec_set,
+                        node_to_join_spec_set=data_set_of_right.instance_set.spec_set,
+                    )
 
-                data_set_of_second_node_that_can_be_joined = self._node_data_set_resolver.get_output_data_set(
-                    second_node_that_could_be_joined
-                )
+                    composite = JoinToBaseOutputNode(
+                        left_node=bridge_node,
+                        join_targets=[
+                            JoinDescription(
+                                join_node=filtered_right_node,
+                                join_on_identifier=join_link_spec,
+                                join_on_partition_dimensions=join_on_partition_dimensions,
+                                join_on_partition_time_dimensions=join_on_partition_time_dimensions,
+                            )
+                        ],
+                    )
 
-                # If the element name of the linkable spec doesn't exist in the joined data set, then it can't be
-                # useful for obtaining that linkable spec.
-                element_names_in_data_set = ToElementNameSet().transform(
-                    data_set_of_second_node_that_can_be_joined.instance_set.spec_set
-                )
+                    next_candidates.append((
+                        composite,
+                        (bridge_node,) + used_source_nodes,
+                        (join_link_spec,) + join_identifiers,
+                    ))
 
-                if desired_linkable_spec.element_name not in element_names_in_data_set:
-                    continue
+            current_candidates = next_candidates
 
-                # The first and second nodes are joined by this identifier
-                identifier_reference_to_join_first_and_second_nodes = desired_linkable_spec.identifier_links[1]
-
-                if not self._join_evaluator.is_valid_instance_set_join(
-                    left_instance_set=data_set_of_first_node_that_could_be_joined.instance_set,
-                    right_instance_set=data_set_of_second_node_that_can_be_joined.instance_set,
-                    on_identifier_reference=identifier_reference_to_join_first_and_second_nodes,
-                ):
-                    continue
-
-                # filter measures out of joinable_node
-                specs = data_set_of_second_node_that_can_be_joined.instance_set.spec_set
-                filtered_joinable_node = FilterElementsNode(
-                    parent_node=second_node_that_could_be_joined,
-                    include_specs=InstanceSpecSet.create_from_linkable_specs(
-                        specs.dimension_specs + specs.identifier_specs + specs.time_dimension_specs
+        # Build final MultiHopJoinCandidate objects from the fully-assembled composites.
+        for composite, source_nodes, join_identifiers in current_candidates:
+            multi_hop_join_candidates.append(
+                MultiHopJoinCandidate(
+                    node_with_multi_hop_elements=composite,
+                    lineage=MultiHopJoinCandidateLineage(
+                        source_nodes_in_chain=source_nodes,
+                        join_by_identifiers=join_identifiers,
                     ),
                 )
-
-                join_on_partition_dimensions = self._partition_resolver.resolve_partition_dimension_joins(
-                    start_node_spec_set=data_set_of_first_node_that_could_be_joined.instance_set.spec_set,
-                    node_to_join_spec_set=data_set_of_second_node_that_can_be_joined.instance_set.spec_set,
-                )
-                join_on_partition_time_dimensions = self._partition_resolver.resolve_partition_time_dimension_joins(
-                    start_node_spec_set=data_set_of_first_node_that_could_be_joined.instance_set.spec_set,
-                    node_to_join_spec_set=data_set_of_second_node_that_can_be_joined.instance_set.spec_set,
-                )
-
-                multi_hop_join_candidates.append(
-                    MultiHopJoinCandidate(
-                        node_with_multi_hop_elements=JoinToBaseOutputNode(
-                            left_node=first_node_that_could_be_joined,
-                            join_targets=[
-                                JoinDescription(
-                                    join_node=filtered_joinable_node,
-                                    join_on_identifier=LinklessIdentifierSpec.from_reference(
-                                        desired_linkable_spec.identifier_links[1]
-                                    ),
-                                    join_on_partition_dimensions=join_on_partition_dimensions,
-                                    join_on_partition_time_dimensions=join_on_partition_time_dimensions,
-                                )
-                            ],
-                        ),
-                        lineage=MultiHopJoinCandidateLineage(
-                            first_node_to_join=first_node_that_could_be_joined,
-                            second_node_to_join=second_node_that_could_be_joined,
-                            # identifier_spec_in_first_node should already not have identifier links since we checked
-                            # for that, but using this method for type checking.
-                            join_second_node_by_identifier=LinklessIdentifierSpec.from_reference(
-                                desired_linkable_spec.identifier_links[1]
-                            ),
-                        ),
-                    )
-                )
+            )
 
         for multi_hop_join_candidate in multi_hop_join_candidates:
             output_data_set = self._node_data_set_resolver.get_output_data_set(

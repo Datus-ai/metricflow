@@ -191,6 +191,44 @@ def test_multi_hop_property(multi_hop_join_semantic_model: SemanticModel) -> Non
     )
 
 
+def test_three_hop_property(multi_hop_join_semantic_model: SemanticModel) -> None:  # noqa: D
+    """Tests that 3-hop linkable elements are discoverable when max_identifier_links is sufficient."""
+    three_hop_spec_resolver = ValidLinkableSpecResolver(
+        user_configured_model=multi_hop_join_semantic_model.user_configured_model,
+        data_source_semantics=multi_hop_join_semantic_model.data_source_semantics,
+        max_identifier_links=3,
+    )
+    result = three_hop_spec_resolver.get_linkable_elements_for_metrics(
+        metric_references=[MetricReference(element_name="txn_count")],
+        with_any_of=frozenset({LinkableElementProperties.MULTI_HOP}),
+        without_any_of=frozenset(),
+    ).as_spec_set.as_tuple
+
+    three_hop_names = sorted(
+        x.qualified_name for x in result if len(x.identifier_links) == 3
+    )
+    assert "account_id__customer_id__customer_third_hop_id__value" in three_hop_names
+
+
+def test_five_hop_property(multi_hop_join_semantic_model: SemanticModel) -> None:  # noqa: D
+    """Tests that 5-hop linkable elements are discoverable when max_identifier_links is sufficient."""
+    five_hop_spec_resolver = ValidLinkableSpecResolver(
+        user_configured_model=multi_hop_join_semantic_model.user_configured_model,
+        data_source_semantics=multi_hop_join_semantic_model.data_source_semantics,
+        max_identifier_links=5,
+    )
+    result = five_hop_spec_resolver.get_linkable_elements_for_metrics(
+        metric_references=[MetricReference(element_name="txn_count")],
+        with_any_of=frozenset({LinkableElementProperties.MULTI_HOP}),
+        without_any_of=frozenset(),
+    ).as_spec_set.as_tuple
+
+    five_hop_names = sorted(
+        x.qualified_name for x in result if len(x.identifier_links) == 5
+    )
+    assert "account_id__customer_id__customer_third_hop_id__fourth_hop_id__fifth_hop_id__fifth_hop_value" in five_hop_names
+
+
 def test_derived_time_granularity_property(simple_model_spec_resolver: ValidLinkableSpecResolver) -> None:  # noqa: D
     property_check_helper(
         spec_resolver=simple_model_spec_resolver,

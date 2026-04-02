@@ -11,9 +11,6 @@ from metricflow.model.semantics.linkable_element_properties import LinkableEleme
 from metricflow.model.spec_converters import WhereConstraintConverter
 from metricflow.references import MetricReference
 from metricflow.specs import MetricSpec, LinkableInstanceSpec, MetricInputMeasureSpec, MeasureSpec
-from metricflow.model.semantics.data_source_join_evaluator import MAX_JOIN_HOPS
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,10 +28,14 @@ class MetricSemantics:  # noqa: D
         for metric in self._user_configured_model.metrics:
             self.add_metric(metric)
 
+        # The maximum number of identifier links is bounded by the number of data sources in the model,
+        # since join paths cannot revisit a data source. This allows N-hop joins without an artificial limit.
+        max_identifier_links = len(self._user_configured_model.data_sources)
+
         self._linkable_spec_resolver = ValidLinkableSpecResolver(
             user_configured_model=self._user_configured_model,
             data_source_semantics=data_source_semantics,
-            max_identifier_links=MAX_JOIN_HOPS,
+            max_identifier_links=max_identifier_links,
         )
 
     def element_specs_for_metrics(

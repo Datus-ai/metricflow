@@ -1,20 +1,20 @@
---- 
+---
 data_source:
-  name: third_hop_table
-  description: third_hop_table
+  name: fourth_hop_table
+  description: fourth_hop_table
   owners:
     - support@transformdata.io
 
-  sql_table: $third_hop_table
+  sql_table: $fourth_hop_table
 
   dimensions:
-    - name: value
+    - name: fourth_hop_value
       type: categorical
 
   identifiers:
-    - name: customer_third_hop_id
-      type: primary
     - name: fourth_hop_id
+      type: primary
+    - name: fifth_hop_id
       type: foreign
 
   mutability:

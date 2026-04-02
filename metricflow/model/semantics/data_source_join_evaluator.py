@@ -9,7 +9,7 @@ from metricflow.object_utils import pformat_big_objects
 from metricflow.protocols.semantics import DataSourceSemanticsAccessor
 from metricflow.references import IdentifierReference
 
-MAX_JOIN_HOPS = 2
+MAX_JOIN_HOPS = 2  # Legacy default; callers should prefer passing an explicit value.
 
 
 @dataclass(frozen=True)
@@ -101,15 +101,26 @@ class DataSourceJoinEvaluator:
         self._data_source_semantics = data_source_semantics
 
     def get_joinable_data_sources(
-        self, left_data_source_reference: DataSourceReference, include_multi_hop: bool = False
+        self,
+        left_data_source_reference: DataSourceReference,
+        include_multi_hop: bool = False,
+        max_join_hops: Optional[int] = None,
     ) -> Dict[str, DataSourceLink]:
-        """List all data sources that can join to given data source, and the identifiers to join them."""
+        """List all data sources that can join to given data source, and the identifiers to join them.
+
+        Args:
+            left_data_source_reference: The starting data source.
+            include_multi_hop: If True, explore paths beyond 1 hop.
+            max_join_hops: Maximum hops to explore. Defaults to MAX_JOIN_HOPS when include_multi_hop is True.
+        """
+        if max_join_hops is None:
+            max_join_hops = MAX_JOIN_HOPS if include_multi_hop else 1
         data_source_joins: Dict[str, DataSourceLink] = {}
         self._get_remaining_hops_of_joinable_data_sources(
             left_data_source_reference=left_data_source_reference,
             parent_data_source_to_join_paths={left_data_source_reference: []},
             known_data_source_joins=data_source_joins,
-            join_hops_remaining=(MAX_JOIN_HOPS if include_multi_hop else 1),
+            join_hops_remaining=max_join_hops,
         )
         return data_source_joins
 

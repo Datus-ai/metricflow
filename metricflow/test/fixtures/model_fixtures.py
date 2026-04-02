@@ -213,6 +213,8 @@ def multi_hop_join_semantic_model(mf_test_session_state: MetricFlowTestSessionSt
         "account_month_txns": f"{schema}.account_month_txns",
         "customer_table": f"{schema}.customer_table",
         "third_hop_table": f"{schema}.third_hop_table",
+        "fourth_hop_table": f"{schema}.fourth_hop_table",
+        "fifth_hop_table": f"{schema}.fifth_hop_table",
         "customer_other_data": f"{schema}.customer_other_data",
         "bridge_table": f"{schema}.bridge_table",
     }
@@ -232,6 +234,8 @@ def unpartitioned_multi_hop_join_semantic_model(  # noqa: D
         "account_month_txns": f"{schema}.account_month_txns",
         "customer_table": f"{schema}.customer_table",
         "third_hop_table": f"{schema}.third_hop_table",
+        "fourth_hop_table": f"{schema}.fourth_hop_table",
+        "fifth_hop_table": f"{schema}.fifth_hop_table",
         "customer_other_data": f"{schema}.customer_other_data",
         "bridge_table": f"{schema}.bridge_table",
     }

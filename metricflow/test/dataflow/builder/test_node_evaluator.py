@@ -438,6 +438,100 @@ def test_node_evaluator_with_multihop_joined_spec(  # noqa: D
     )
 
 
+def test_node_evaluator_with_three_hop_joined_spec(  # noqa: D
+    consistent_id_object_repository: ConsistentIdObjectRepository,
+    multi_hop_join_semantic_model: SemanticModel,
+    time_spine_source: TimeSpineSource,
+) -> None:
+    """Tests the case where a 3-hop join is needed: txn -> bridge -> customer_other_data -> third_hop_table."""
+    txn_source = consistent_id_object_repository.multihop_model_read_nodes["account_month_txns"]
+
+    linkable_specs = [
+        DimensionSpec(
+            element_name="value",
+            identifier_links=(
+                IdentifierReference(element_name="account_id"),
+                IdentifierReference(element_name="customer_id"),
+                IdentifierReference(element_name="customer_third_hop_id"),
+            ),
+        ),
+    ]
+
+    multihop_node_evaluator = make_multihop_node_evaluator(
+        model_source_nodes=consistent_id_object_repository.multihop_model_source_nodes,
+        semantic_model_with_multihop_links=multi_hop_join_semantic_model,
+        desired_linkable_specs=linkable_specs,
+        time_spine_source=time_spine_source,
+    )
+
+    evaluation = multihop_node_evaluator.evaluate_node(
+        required_linkable_specs=linkable_specs,
+        start_node=txn_source,
+    )
+
+    assert len(evaluation.unjoinable_linkable_specs) == 0
+    assert len(evaluation.joinable_linkable_specs) == 1
+    assert evaluation.joinable_linkable_specs[0] == DimensionSpec(
+        element_name="value",
+        identifier_links=(
+            IdentifierReference(element_name="account_id"),
+            IdentifierReference(element_name="customer_id"),
+            IdentifierReference(element_name="customer_third_hop_id"),
+        ),
+    )
+    assert len(evaluation.join_recipes) == 1
+    assert evaluation.join_recipes[0].join_on_identifier == LinklessIdentifierSpec.from_element_name("account_id")
+
+
+def test_node_evaluator_with_five_hop_joined_spec(  # noqa: D
+    consistent_id_object_repository: ConsistentIdObjectRepository,
+    multi_hop_join_semantic_model: SemanticModel,
+    time_spine_source: TimeSpineSource,
+) -> None:
+    """Tests the case where a 5-hop join is needed: txn -> bridge -> customer_other_data -> third_hop -> fourth_hop -> fifth_hop."""
+    txn_source = consistent_id_object_repository.multihop_model_read_nodes["account_month_txns"]
+
+    linkable_specs = [
+        DimensionSpec(
+            element_name="fifth_hop_value",
+            identifier_links=(
+                IdentifierReference(element_name="account_id"),
+                IdentifierReference(element_name="customer_id"),
+                IdentifierReference(element_name="customer_third_hop_id"),
+                IdentifierReference(element_name="fourth_hop_id"),
+                IdentifierReference(element_name="fifth_hop_id"),
+            ),
+        ),
+    ]
+
+    multihop_node_evaluator = make_multihop_node_evaluator(
+        model_source_nodes=consistent_id_object_repository.multihop_model_source_nodes,
+        semantic_model_with_multihop_links=multi_hop_join_semantic_model,
+        desired_linkable_specs=linkable_specs,
+        time_spine_source=time_spine_source,
+    )
+
+    evaluation = multihop_node_evaluator.evaluate_node(
+        required_linkable_specs=linkable_specs,
+        start_node=txn_source,
+    )
+
+    assert len(evaluation.unjoinable_linkable_specs) == 0
+    assert len(evaluation.joinable_linkable_specs) == 1
+    assert evaluation.joinable_linkable_specs[0] == DimensionSpec(
+        element_name="fifth_hop_value",
+        identifier_links=(
+            IdentifierReference(element_name="account_id"),
+            IdentifierReference(element_name="customer_id"),
+            IdentifierReference(element_name="customer_third_hop_id"),
+            IdentifierReference(element_name="fourth_hop_id"),
+            IdentifierReference(element_name="fifth_hop_id"),
+        ),
+    )
+    assert len(evaluation.join_recipes) == 1
+    assert evaluation.join_recipes[0].join_on_identifier == LinklessIdentifierSpec.from_element_name("account_id")
+
+
 def test_node_evaluator_with_partition_joined_spec(  # noqa: D
     consistent_id_object_repository: ConsistentIdObjectRepository,
     node_evaluator: NodeEvaluatorForLinkableInstances,

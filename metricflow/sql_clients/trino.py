@@ -135,13 +135,16 @@ class TrinoSqlClient(SqlAlchemySqlClient):
                 for value in row:
                     if pd.isna(value):
                         values.append("NULL")
+                    elif isinstance(value, bool):
+                        values.append("true" if value else "false")
                     elif isinstance(value, str):
                         escaped_value = value.replace("'", "''")
                         values.append(f"'{escaped_value}'")
                     elif isinstance(value, (int, float)):
                         values.append(str(value))
-                    elif isinstance(value, bool):
-                        values.append("true" if value else "false")
+                    elif hasattr(value, 'strftime'):
+                        # datetime/Timestamp: Trino requires explicit TIMESTAMP cast
+                        values.append(f"TIMESTAMP '{value.strftime('%Y-%m-%d %H:%M:%S')}'")
                     else:
                         values.append(f"'{str(value)}'")
                 values_list.append(f"({', '.join(values)})")

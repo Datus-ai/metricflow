@@ -23,6 +23,7 @@ from metricflow.configuration.yaml_handler import YamlFileHandler
 DIALECT_MAPPING = {
     "postgres": "postgresql",
     "postgresql": "postgresql",
+    "greenplum": "greenplum",
     "mysql": "mysql",
     "starrocks": "mysql",
     "clickhouse": "clickhouse",
@@ -39,6 +40,7 @@ DEFAULT_SCHEMA_MAPPING = {
     "mysql": "default",
     "postgres": "public",
     "postgresql": "public",
+    "greenplum": "public",
 }
 
 

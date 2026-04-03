@@ -30,6 +30,7 @@ from metricflow.cli.utils import (
     start_end_time_options,
     MF_BIGQUERY_KEYS,
     MF_CONFIG_KEYS,
+    MF_GREENPLUM_KEYS,
     MF_REDSHIFT_KEYS,
     MF_SNOWFLAKE_KEYS,
     MF_POSTGRESQL_KEYS,
@@ -174,6 +175,7 @@ def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
             SqlDialect.BIGQUERY.value: MF_BIGQUERY_KEYS,
             SqlDialect.REDSHIFT.value: MF_REDSHIFT_KEYS,
             SqlDialect.POSTGRESQL.value: MF_POSTGRESQL_KEYS,
+            SqlDialect.GREENPLUM.value: MF_GREENPLUM_KEYS,
             SqlDialect.DUCKDB.value: generate_duckdb_demo_keys(config_dir=cfg.config.dir_path),
             SqlDialect.DATABRICKS.value: MF_DATABRICKS_KEYS,
         }

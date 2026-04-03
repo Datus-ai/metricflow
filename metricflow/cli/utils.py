@@ -79,6 +79,16 @@ MF_POSTGRESQL_KEYS = (
     ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.POSTGRESQL.value),
 )
 
+# Greenplum config keys
+MF_GREENPLUM_KEYS = (
+    ConfigKey(key=CONFIG_DWH_DB),
+    ConfigKey(key=CONFIG_DWH_PASSWORD, comment="Password associated with the provided user"),
+    ConfigKey(key=CONFIG_DWH_USER, comment="Username for the data warehouse"),
+    ConfigKey(key=CONFIG_DWH_PORT),
+    ConfigKey(key=CONFIG_DWH_HOST, comment="Host name"),
+    ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.GREENPLUM.value),
+)
+
 # Redshift config keys
 MF_REDSHIFT_KEYS = (
     ConfigKey(key=CONFIG_DWH_DB),

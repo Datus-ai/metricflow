@@ -18,12 +18,15 @@ from metricflow.protocols.sql_client import SqlClient, SqlIsolationLevel
 from metricflow.protocols.sql_request import SqlJsonTag
 from metricflow.sql.sql_bind_parameters import SqlBindParameters
 from metricflow.sql_clients.base_sql_client_implementation import SqlClientException
+from metricflow.sql_clients.clickhouse import ClickHouseSqlClient
 from metricflow.sql_clients.common_client import SqlDialect, not_empty
 from metricflow.sql_clients.duckdb import DuckDbSqlClient
 from metricflow.sql_clients.greenplum import GreenplumSqlClient
 from metricflow.sql_clients.mysql import MySQLSqlClient
 from metricflow.sql_clients.postgres import PostgresSqlClient
 from metricflow.sql_clients.sqlite import SqliteSqlClient
+from metricflow.sql_clients.starrocks import StarRocksSqlClient
+from metricflow.sql_clients.trino import TrinoSqlClient
 
 
 def make_df(  # type: ignore [misc]
@@ -71,11 +74,17 @@ def make_sql_client(url: str, password: str) -> AsyncSqlClient:
         return PostgresSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.GREENPLUM:
         return GreenplumSqlClient.from_connection_details(url, password)
+    elif dialect == SqlDialect.CLICKHOUSE:
+        return ClickHouseSqlClient.from_connection_details(url, password)
+    elif dialect == SqlDialect.STARROCKS:
+        return StarRocksSqlClient.from_connection_details(url, password)
+    elif dialect == SqlDialect.TRINO:
+        return TrinoSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.SQLITE:
         return SqliteSqlClient.from_connection_details(url, password)
     else:
         raise ValueError(
-            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, and SQLite dialects are supported in this build. Got: `{dialect}` in URL {url}"
+            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, and SQLite dialects are supported in this build. Got: `{dialect}` in URL {url}"
         )
 
 
@@ -116,12 +125,39 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
 
         greenplum_url = f"greenplum://{username}@{host}:{port}/{database}"
         return GreenplumSqlClient.from_connection_details(greenplum_url, password)
+    elif dialect == SqlDialect.CLICKHOUSE.value:
+        host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
+        port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
+        username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
+        password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
+        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
+
+        clickhouse_url = f"clickhouse://{username}@{host}:{port}/{database}"
+        return ClickHouseSqlClient.from_connection_details(clickhouse_url, password)
+    elif dialect == SqlDialect.STARROCKS.value:
+        host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
+        port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
+        username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
+        password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
+        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
+
+        starrocks_url = f"starrocks://{username}@{host}:{port}/{database}"
+        return StarRocksSqlClient.from_connection_details(starrocks_url, password)
+    elif dialect == SqlDialect.TRINO.value:
+        host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
+        port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
+        username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
+        password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
+        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
+
+        trino_url = f"trino://{username}@{host}:{port}/{database}"
+        return TrinoSqlClient.from_connection_details(trino_url, password)
     elif dialect == SqlDialect.SQLITE.value:
         database = not_empty(handler.get_value(CONFIG_DWH_DB), CONFIG_DWH_DB, url)
         return SqliteSqlClient(file_path=database)
     else:
         raise ValueError(
-            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, and SQLite dialects are supported in this build. Got dialect '{dialect}' in {url}"
+            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, and SQLite dialects are supported in this build. Got dialect '{dialect}' in {url}"
         )
 
 

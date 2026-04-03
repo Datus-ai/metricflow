@@ -25,8 +25,9 @@ DIALECT_MAPPING = {
     "postgresql": "postgresql",
     "greenplum": "greenplum",
     "mysql": "mysql",
-    "starrocks": "mysql",
+    "starrocks": "starrocks",
     "clickhouse": "clickhouse",
+    "trino": "trino",
     "duckdb": "duckdb",
     "sqlite": "sqlite",
     "snowflake": "snowflake",
@@ -92,6 +93,10 @@ def build_config_dict_from_db_params(
         result[CONFIG_DWH_SCHEMA] = schema
     elif db_type_lower == "starrocks":
         result[CONFIG_DWH_SCHEMA] = database
+    elif db_type_lower == "clickhouse":
+        result[CONFIG_DWH_SCHEMA] = database
+    elif db_type_lower == "trino":
+        result[CONFIG_DWH_SCHEMA] = "default"
     elif db_type_lower in DEFAULT_SCHEMA_MAPPING:
         result[CONFIG_DWH_SCHEMA] = DEFAULT_SCHEMA_MAPPING[db_type_lower]
     else:

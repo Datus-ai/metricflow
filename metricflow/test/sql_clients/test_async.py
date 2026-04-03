@@ -194,6 +194,9 @@ def test_request_tags(
         or engine_type is SqlEngine.POSTGRES
         or engine_type is SqlEngine.GREENPLUM
         or engine_type is SqlEngine.MYSQL
+        or engine_type is SqlEngine.CLICKHOUSE
+        or engine_type is SqlEngine.STARROCKS
+        or engine_type is SqlEngine.TRINO
     ):
         pytest.skip(f"Testing tags not supported in {engine_type}")
     else:

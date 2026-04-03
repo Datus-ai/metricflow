@@ -22,6 +22,9 @@ class SqlEngine(Enum):
     DATABRICKS = "Databricks"
     SQLITE = "SQLite"
     GREENPLUM = "Greenplum"
+    CLICKHOUSE = "ClickHouse"
+    STARROCKS = "StarRocks"
+    TRINO = "Trino"
 
     # Not yet supported.
     MYSQL = "MySQL"

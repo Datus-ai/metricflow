@@ -155,6 +155,7 @@ class DatusConfigHandler(YamlFileHandler):
             dialect_mapping = {
                 "postgres": "postgresql",
                 "postgresql": "postgresql",
+                "greenplum": "greenplum",
                 "mysql": "mysql",
                 "starrocks": "mysql",  # StarRocks uses MySQL protocol
                 "clickhouse": "clickhouse",
@@ -203,7 +204,7 @@ class DatusConfigHandler(YamlFileHandler):
             elif db_type == "starrocks":
                 # For StarRocks, use database as schema since it doesn't have schema concept
                 return self._resolve_env_vars(self.db_config.get("database", ""))
-            elif db_type in ("postgres", "postgresql"):
+            elif db_type in ("postgres", "postgresql", "greenplum"):
                 return "public"
             else:
                 return self._resolve_env_vars(self.db_config.get("schema") or self.db_config.get("schema_name") or "")

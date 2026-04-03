@@ -20,6 +20,7 @@ from metricflow.sql.sql_bind_parameters import SqlBindParameters
 from metricflow.sql_clients.base_sql_client_implementation import SqlClientException
 from metricflow.sql_clients.common_client import SqlDialect, not_empty
 from metricflow.sql_clients.duckdb import DuckDbSqlClient
+from metricflow.sql_clients.greenplum import GreenplumSqlClient
 from metricflow.sql_clients.mysql import MySQLSqlClient
 from metricflow.sql_clients.postgres import PostgresSqlClient
 from metricflow.sql_clients.sqlite import SqliteSqlClient
@@ -68,11 +69,13 @@ def make_sql_client(url: str, password: str) -> AsyncSqlClient:
         return MySQLSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.POSTGRESQL:
         return PostgresSqlClient.from_connection_details(url, password)
+    elif dialect == SqlDialect.GREENPLUM:
+        return GreenplumSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.SQLITE:
         return SqliteSqlClient.from_connection_details(url, password)
     else:
         raise ValueError(
-            f"Only DuckDB, MySQL, PostgreSQL, and SQLite dialects are supported in this build. Got: `{dialect}` in URL {url}"
+            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, and SQLite dialects are supported in this build. Got: `{dialect}` in URL {url}"
         )
 
 
@@ -104,12 +107,21 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
 
         postgres_url = f"postgresql://{username}@{host}:{port}/{database}"
         return PostgresSqlClient.from_connection_details(postgres_url, password)
+    elif dialect == SqlDialect.GREENPLUM.value:
+        host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
+        port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
+        username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
+        password = not_empty(handler.get_value(CONFIG_DWH_PASSWORD), "password", url)
+        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
+
+        greenplum_url = f"greenplum://{username}@{host}:{port}/{database}"
+        return GreenplumSqlClient.from_connection_details(greenplum_url, password)
     elif dialect == SqlDialect.SQLITE.value:
         database = not_empty(handler.get_value(CONFIG_DWH_DB), CONFIG_DWH_DB, url)
         return SqliteSqlClient(file_path=database)
     else:
         raise ValueError(
-            f"Only DuckDB, MySQL, PostgreSQL, and SQLite dialects are supported in this build. Got dialect '{dialect}' in {url}"
+            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, and SQLite dialects are supported in this build. Got dialect '{dialect}' in {url}"
         )
 
 

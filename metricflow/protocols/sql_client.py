@@ -21,6 +21,7 @@ class SqlEngine(Enum):
     SNOWFLAKE = "Snowflake"
     DATABRICKS = "Databricks"
     SQLITE = "SQLite"
+    GREENPLUM = "Greenplum"
 
     # Not yet supported.
     MYSQL = "MySQL"

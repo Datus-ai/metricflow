@@ -116,6 +116,36 @@ MF_DATABRICKS_KEYS = (
     ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.DATABRICKS.value),
 )
 
+# ClickHouse config keys
+MF_CLICKHOUSE_KEYS = (
+    ConfigKey(key=CONFIG_DWH_DB),
+    ConfigKey(key=CONFIG_DWH_PASSWORD, comment="Password associated with the provided user (can be empty)"),
+    ConfigKey(key=CONFIG_DWH_USER, comment="Username for the data warehouse"),
+    ConfigKey(key=CONFIG_DWH_PORT),
+    ConfigKey(key=CONFIG_DWH_HOST, comment="Host name"),
+    ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.CLICKHOUSE.value),
+)
+
+# StarRocks config keys
+MF_STARROCKS_KEYS = (
+    ConfigKey(key=CONFIG_DWH_DB),
+    ConfigKey(key=CONFIG_DWH_PASSWORD, comment="Password associated with the provided user (can be empty)"),
+    ConfigKey(key=CONFIG_DWH_USER, comment="Username for the data warehouse"),
+    ConfigKey(key=CONFIG_DWH_PORT),
+    ConfigKey(key=CONFIG_DWH_HOST, comment="Host name"),
+    ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.STARROCKS.value),
+)
+
+# Trino config keys
+MF_TRINO_KEYS = (
+    ConfigKey(key=CONFIG_DWH_DB, comment="Catalog name"),
+    ConfigKey(key=CONFIG_DWH_PASSWORD, comment="Password (can be empty for memory connector)"),
+    ConfigKey(key=CONFIG_DWH_USER, comment="Username for the data warehouse"),
+    ConfigKey(key=CONFIG_DWH_PORT),
+    ConfigKey(key=CONFIG_DWH_HOST, comment="Host name"),
+    ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.TRINO.value),
+)
+
 
 def generate_duckdb_demo_keys(config_dir: str) -> Tuple[ConfigKey, ...]:
     """Generate configuration keys for DuckDB with a file in the config_dir."""

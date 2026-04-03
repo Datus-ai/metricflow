@@ -16,6 +16,9 @@ class SqlDialect(ExtendedEnum):
     DATABRICKS = "databricks"
     SQLITE = "sqlite"
     GREENPLUM = "greenplum"
+    CLICKHOUSE = "clickhouse"
+    STARROCKS = "starrocks"
+    TRINO = "trino"
 
 
 T = TypeVar("T")

@@ -149,8 +149,9 @@ class DatusConfigHandler(YamlFileHandler):
                 "postgresql": "postgresql",
                 "greenplum": "greenplum",
                 "mysql": "mysql",
-                "starrocks": "mysql",  # StarRocks uses MySQL protocol
+                "starrocks": "starrocks",
                 "clickhouse": "clickhouse",
+                "trino": "trino",
                 "duckdb": "duckdb",
                 "sqlite": "sqlite",
                 "snowflake": "snowflake",
@@ -196,6 +197,11 @@ class DatusConfigHandler(YamlFileHandler):
             elif db_type == "starrocks":
                 # For StarRocks, use database as schema since it doesn't have schema concept
                 return self._resolve_env_vars(self.db_config.get("database", ""))
+            elif db_type == "clickhouse":
+                # For ClickHouse, schema == database
+                return self._resolve_env_vars(self.db_config.get("database", ""))
+            elif db_type == "trino":
+                return self._resolve_env_vars(self.db_config.get("schema", "")) or "default"
             elif db_type in ("postgres", "postgresql", "greenplum"):
                 return "public"
             else:

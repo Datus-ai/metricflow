@@ -142,6 +142,11 @@ class DictConfigHandler(YamlFileHandler):
         return self._get_dummy_config_path()
 
     @property
+    def url(self) -> str:
+        """Return a descriptive url indicating this is an in-memory config."""
+        return "dict-config://in-memory"
+
+    @property
     def log_file_path(self) -> str:
         log_dir = pathlib.Path.home() / ".metricflow" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)

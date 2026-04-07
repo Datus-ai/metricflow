@@ -18,10 +18,7 @@ from mcp_metricflow.server import create_app, MetricFlowConfig
 def setup_logging(verbose: bool = False):
     """Setup logging configuration"""
     level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    logging.basicConfig(level=level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
 def validate_metricflow_setup():
@@ -60,7 +57,7 @@ def run_server(args):
     host = args.host or os.getenv("MCP_HOST", "0.0.0.0")
     port = args.port or int(os.getenv("MCP_PORT", "8080"))
 
-    print(f"🚀 Starting MetricFlow MCP Server")
+    print("🚀 Starting MetricFlow MCP Server")
     print(f"   Host: {host}")
     print(f"   Port: {port}")
     print(f"   MCP endpoint: http://{host}:{port}/mcp")
@@ -81,13 +78,7 @@ def run_server(args):
 
     # Run the server
     try:
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info" if args.verbose else "warning",
-            access_log=args.verbose
-        )
+        uvicorn.run(app, host=host, port=port, log_level="info" if args.verbose else "warning", access_log=args.verbose)
     except KeyboardInterrupt:
         print("\n👋 Server stopped by user")
     except Exception as e:
@@ -110,6 +101,7 @@ def test_connection(args):
     try:
         # Test basic MetricFlow command
         from mcp_metricflow.server import _run_mf_command
+
         health_result = _run_mf_command(["mf", "health-checks"])
         if health_result["success"]:
             print("✅ Health check passed")
@@ -120,10 +112,10 @@ def test_connection(args):
         # Test listing metrics
         try:
             metrics_output = list_metrics()
-            print(f"✅ Metrics listed successfully")
+            print("✅ Metrics listed successfully")
             if args.verbose and metrics_output:
                 print("   Metrics output preview:")
-                lines = metrics_output.split('\n')[:5]
+                lines = metrics_output.split("\n")[:5]
                 for line in lines:
                     if line.strip():
                         print(f"     {line.strip()}")
@@ -144,27 +136,14 @@ def main():
         description="MetricFlow MCP Server - Model Context Protocol wrapper for MetricFlow"
     )
 
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose logging"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
 
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # Server command
     server_parser = subparsers.add_parser("serve", help="Start the MCP server")
-    server_parser.add_argument(
-        "--host",
-        default=None,
-        help="Host to bind to (default: 0.0.0.0)"
-    )
-    server_parser.add_argument(
-        "--port", "-p",
-        type=int,
-        default=None,
-        help="Port to bind to (default: 8080)"
-    )
+    server_parser.add_argument("--host", default=None, help="Host to bind to (default: 0.0.0.0)")
+    server_parser.add_argument("--port", "-p", type=int, default=None, help="Port to bind to (default: 8080)")
 
     # Test command
     subparsers.add_parser("test", help="Test MetricFlow connection")

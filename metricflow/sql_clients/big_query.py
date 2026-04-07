@@ -80,9 +80,11 @@ class BigQuerySqlClient(SqlAlchemySqlClient):
         bq_engine = BigQuerySqlClient._create_bq_engine(project_id=project_id, password=password)
         self._bq_client = Client(
             project=self._project_id,
-            credentials=google.oauth2.service_account.Credentials.from_service_account_info(password_json)
-            if password_json
-            else None,
+            credentials=(
+                google.oauth2.service_account.Credentials.from_service_account_info(password_json)
+                if password_json
+                else None
+            ),
         )
         super().__init__(engine=bq_engine)
 

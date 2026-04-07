@@ -133,9 +133,7 @@ class DuckDbSqlClient(SqlAlchemySqlClient):
         with self._concurrency_lock:
             raw_connection = self._engine.raw_connection()
             try:
-                logger.info(
-                    f"Creating table '{sql_table.sql}' from a DataFrame with {df.shape[0]} row(s)"
-                )
+                logger.info(f"Creating table '{sql_table.sql}' from a DataFrame with {df.shape[0]} row(s)")
                 start_time = time.time()
 
                 # For DuckDB, create table in the correct schema without catalog prefix
@@ -151,6 +149,7 @@ class DuckDbSqlClient(SqlAlchemySqlClient):
                     # Create table structure (suppress warning by using warnings module)
                     temp_table = f"temp_{sql_table.table_name}"
                     import warnings
+
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore", UserWarning)
                         df.to_sql(name=temp_table, con=raw_connection, schema=None, index=False, if_exists="replace")
@@ -173,9 +172,7 @@ class DuckDbSqlClient(SqlAlchemySqlClient):
                         chunksize=chunk_size,
                     )
                 raw_connection.commit()
-                logger.info(
-                    f"Created table '{sql_table.sql}' from a DataFrame in {time.time() - start_time:.2f}s"
-                )
+                logger.info(f"Created table '{sql_table.sql}' from a DataFrame in {time.time() - start_time:.2f}s")
             finally:
                 raw_connection.close()
 

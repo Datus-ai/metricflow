@@ -74,7 +74,10 @@ materialization_destination_schema = {
         },
         "tableau_params": tableau_params,
     },
-    "anyOf": [{"not": {"$ref": "materialization_destination_schema#/definitions/is-tableau"}}, {"required": ["tableau_params"]}],
+    "anyOf": [
+        {"not": {"$ref": "materialization_destination_schema#/definitions/is-tableau"}},
+        {"required": ["tableau_params"]},
+    ],
     "definitions": {"is-tableau": {"properties": {"location": {"enum": materialization_location_tableau_values}}}},
     "additionalProperties": False,
 }

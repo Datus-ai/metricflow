@@ -3,6 +3,7 @@
 Tests that the Greenplum renderer correctly inherits PostgreSQL behavior
 and overrides only what's needed (UUID generation).
 """
+
 import pytest
 
 from metricflow.sql.render.greenplum import GreenplumSqlExpressionRenderer, GreenplumSqlQueryPlanRenderer

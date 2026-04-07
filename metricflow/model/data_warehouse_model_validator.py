@@ -381,9 +381,9 @@ class DataWarehouseTaskBuilder:
                 source_node_by_measure_spec.update({measure_spec: source_node for measure_spec in measure_specs})
                 measure_specs_source_node_pair.append((measure_specs, source_node))
 
-            source_node_to_sub_task: DefaultDict[
-                BaseOutput[DataSourceDataSet], List[DataWarehouseValidationTask]
-            ] = collections.defaultdict(list)
+            source_node_to_sub_task: DefaultDict[BaseOutput[DataSourceDataSet], List[DataWarehouseValidationTask]] = (
+                collections.defaultdict(list)
+            )
             for spec in data_source_specs:
                 obtained_source_node = source_node_by_measure_spec.get(spec)
                 assert obtained_source_node, f"Unable to find generated source node for measure: {spec.element_name}"

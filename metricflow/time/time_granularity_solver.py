@@ -67,9 +67,9 @@ class TimeGranularitySolver:
             self._semantic_model.user_configured_model
         )
 
-        self._local_time_dimension_granularities: Dict[
-            LocalTimeDimensionGranularityKey, Set[TimeGranularity]
-        ] = defaultdict(set)
+        self._local_time_dimension_granularities: Dict[LocalTimeDimensionGranularityKey, Set[TimeGranularity]] = (
+            defaultdict(set)
+        )
 
         for source_node in source_nodes:
             output_data_set = node_output_resolver.get_output_data_set(source_node)

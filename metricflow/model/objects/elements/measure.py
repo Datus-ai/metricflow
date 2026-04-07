@@ -41,9 +41,9 @@ class Measure(HashableBaseModel, ModelWithMetadataParsing):
     metadata: Optional[Metadata] = None
     non_additive_dimension: Optional[NonAdditiveDimensionParameters] = None
 
-    @field_validator('expr', mode='before')
+    @field_validator("expr", mode="before")
     @classmethod
-    def coerce_expr_to_str(cls, v):
+    def coerce_expr_to_str(cls, v):  # noqa: D102
         if v is not None and not isinstance(v, str):
             return str(v)
         return v

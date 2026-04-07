@@ -76,10 +76,7 @@ class CLIContext:
         """
         if self._config_handler is None:
             if self._namespace:
-                self._config_handler = DatusConfigHandler(
-                    namespace=self._namespace,
-                    config_path=self._config_path
-                )
+                self._config_handler = DatusConfigHandler(namespace=self._namespace, config_path=self._config_path)
             else:
                 self._config_handler = ConfigHandler()
         return self._config_handler

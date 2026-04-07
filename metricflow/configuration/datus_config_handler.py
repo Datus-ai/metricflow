@@ -26,6 +26,7 @@ class DatusConfigHandler(YamlFileHandler):
     """Config handler that reads from Datus agent.yml configuration."""
 
     def __init__(self, namespace: str, config_path: Optional[str] = None) -> None:
+        """Initialize DatusConfigHandler with namespace and optional config path."""
         self.namespace = namespace
         self.config_path = config_path
         self.datus_config = self._load_datus_config()
@@ -84,8 +85,7 @@ class DatusConfigHandler(YamlFileHandler):
         if self.namespace not in namespaces:
             available = ", ".join(namespaces.keys())
             raise ValueError(
-                f"Namespace '{self.namespace}' not found in Datus config. "
-                f"Available namespaces: {available}"
+                f"Namespace '{self.namespace}' not found in Datus config. " f"Available namespaces: {available}"
             )
 
         return namespaces[self.namespace]
@@ -101,18 +101,10 @@ class DatusConfigHandler(YamlFileHandler):
             return value_str
 
         # Replace ${VAR} style
-        value_str = re.sub(
-            r"\$\{([^}]+)\}",
-            lambda m: os.environ.get(m.group(1), m.group(0)),
-            value_str
-        )
+        value_str = re.sub(r"\$\{([^}]+)\}", lambda m: os.environ.get(m.group(1), m.group(0)), value_str)
 
         # Replace $VAR style
-        value_str = re.sub(
-            r"\$([A-Za-z_][A-Za-z0-9_]*)",
-            lambda m: os.environ.get(m.group(1), m.group(0)),
-            value_str
-        )
+        value_str = re.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)", lambda m: os.environ.get(m.group(1), m.group(0)), value_str)
 
         return value_str
 
@@ -186,7 +178,7 @@ class DatusConfigHandler(YamlFileHandler):
                 uri = self._resolve_env_vars(self.db_config.get("uri", ""))
                 # Remove protocol prefix if present
                 if uri.startswith(f"{db_type}:///"):
-                    uri = uri[len(f"{db_type}:///"):]
+                    uri = uri[len(f"{db_type}:///") :]
                 return os.path.expanduser(uri)
             else:
                 return self._resolve_env_vars(self.db_config.get("database", ""))

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import field_validator, model_validator
+from pydantic import field_validator
 from metricflow.errors.errors import ParsingException
 from metricflow.model.objects.common import Metadata
 from metricflow.model.objects.constraints.where import WhereClauseConstraint
@@ -39,7 +39,7 @@ class MetricInputMeasure(HashableBaseModel, PydanticCustomInputParser):
     constraint: Optional[WhereClauseConstraint] = None
     alias: Optional[str] = None
 
-    @field_validator('constraint', mode='before')
+    @field_validator("constraint", mode="before")
     @classmethod
     def parse_constraint_input(cls, v):
         if isinstance(v, str):
@@ -137,14 +137,14 @@ class MetricInput(HashableBaseModel):
     offset_window: Optional[MetricTimeWindow] = None
     offset_to_grain: Optional[TimeGranularity] = None
 
-    @field_validator('constraint', mode='before')
+    @field_validator("constraint", mode="before")
     @classmethod
     def parse_constraint_input(cls, v):
         if isinstance(v, str):
             return WhereClauseConstraint.parse(v)
         return v
 
-    @field_validator('offset_window', mode='before')
+    @field_validator("offset_window", mode="before")
     @classmethod
     def parse_offset_window_input(cls, v):
         if isinstance(v, str):
@@ -164,21 +164,21 @@ class MetricTypeParams(HashableBaseModel):
     grain_to_date: Optional[TimeGranularity] = None
     metrics: Optional[List[MetricInput]] = None
 
-    @field_validator('measure', 'numerator', 'denominator', mode='before')
+    @field_validator("measure", "numerator", "denominator", mode="before")
     @classmethod
     def parse_measure_input(cls, v):
         if isinstance(v, str):
             return MetricInputMeasure(name=v)
         return v
 
-    @field_validator('measures', mode='before')
+    @field_validator("measures", mode="before")
     @classmethod
     def parse_measures_input(cls, v):
         if isinstance(v, list):
             return [MetricInputMeasure(name=item) if isinstance(item, str) else item for item in v]
         return v
 
-    @field_validator('window', mode='before')
+    @field_validator("window", mode="before")
     @classmethod
     def parse_window_input(cls, v):
         if isinstance(v, str):
@@ -206,7 +206,7 @@ class Metric(HashableBaseModel, ModelWithMetadataParsing):
     constraint: Optional[WhereClauseConstraint] = None
     metadata: Optional[Metadata] = None
 
-    @field_validator('constraint', mode='before')
+    @field_validator("constraint", mode="before")
     @classmethod
     def parse_constraint_input(cls, v):
         if isinstance(v, str):

@@ -140,7 +140,7 @@ def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
         try:
             # Try to create DatusConfigHandler to validate namespace exists
             config_handler = DatusConfigHandler(namespace=namespace)
-            db_type = config_handler.db_config.get('type', 'unknown')
+            db_type = config_handler.db_config.get("type", "unknown")
 
             click.echo(f"✅ Found configuration for namespace '{namespace}'")
             click.echo(f"   Database type: {db_type}")
@@ -153,12 +153,12 @@ def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
             semantic_models_dir.mkdir(exist_ok=True)
 
             click.echo("\n✅ Setup validation completed!")
-            click.echo(f"\n💡 Usage: Add --namespace to all mf commands")
-            click.echo(f"\n   Examples:")
+            click.echo("\n💡 Usage: Add --namespace to all mf commands")
+            click.echo("\n   Examples:")
             click.echo(f"     mf --namespace {namespace} list-metrics")
             click.echo(f"     mf --namespace {namespace} query --metrics revenue --dimensions metric_time")
             click.echo(f"     mf --namespace {namespace} health-checks")
-            click.echo(f"\n   Note: MetricFlow will read database config directly from Datus agent.yml")
+            click.echo("\n   Note: MetricFlow will read database config directly from Datus agent.yml")
             return
         except (FileNotFoundError, ValueError) as e:
             click.echo(f"❌ {str(e)}")

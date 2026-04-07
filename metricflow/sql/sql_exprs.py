@@ -323,7 +323,7 @@ class SqlStringExpression(SqlExpressionNode):
             and self.execution_parameters == other.execution_parameters
         )
 
-    def as_string_expression(self) -> Optional[SqlStringExpression]:
+    def as_string_expression(self) -> Optional[SqlStringExpression]:  # type: ignore[override]
         """If this is a string expression, return self."""
         return self
 

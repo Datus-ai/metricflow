@@ -47,7 +47,7 @@ class ElementConsistencyRule(ModelValidationRule):
                     )
                 )
 
-        return issues
+        return issues  # type: ignore[return-value]
 
     @staticmethod
     def _get_element_name_to_types(

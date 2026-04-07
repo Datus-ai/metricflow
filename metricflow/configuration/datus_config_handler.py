@@ -201,7 +201,7 @@ class DatusConfigHandler(YamlFileHandler):
                 # For ClickHouse, schema == database
                 return self._resolve_env_vars(self.db_config.get("database", ""))
             elif db_type == "trino":
-                return self._resolve_env_vars(self.db_config.get("schema", "")) or "default"
+                return "default"
             elif db_type in ("postgres", "postgresql", "greenplum"):
                 return "public"
             else:

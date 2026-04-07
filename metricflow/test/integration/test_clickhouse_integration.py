@@ -11,6 +11,7 @@ import tempfile
 from string import Template
 
 import pytest
+import sqlalchemy.exc
 from unittest.mock import patch, MagicMock
 
 from metricflow.configuration.constants import (
@@ -219,7 +220,7 @@ def _make_ch_client():
         client = ClickHouseSqlClient.from_connection_details(url=CH_URL, password=CH_PASSWORD)
         client.query("SELECT 1")
         return client
-    except Exception:
+    except (sqlalchemy.exc.OperationalError, ConnectionError, OSError):
         return None
 
 

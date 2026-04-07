@@ -31,43 +31,34 @@ class ClickHouseSqlExpressionRenderer(DefaultSqlExpressionRenderer):
             execution_parameters=arg_rendered.execution_parameters,
         )
 
+    @staticmethod
+    def _render_to_start_of(arg_sql: str, granularity: TimeGranularity) -> str:
+        """Map a TimeGranularity to the corresponding ClickHouse toStartOf* call."""
+        if granularity == TimeGranularity.WEEK:
+            return f"toStartOfWeek({arg_sql}, 1)"  # 1 = Monday
+        elif granularity == TimeGranularity.MONTH:
+            return f"toStartOfMonth({arg_sql})"
+        elif granularity == TimeGranularity.QUARTER:
+            return f"toStartOfQuarter({arg_sql})"
+        elif granularity == TimeGranularity.YEAR:
+            return f"toStartOfYear({arg_sql})"
+        else:
+            # DAY and any unknown granularity fall back to toStartOfDay
+            return f"toStartOfDay({arg_sql})"
+
     def visit_date_trunc_expr(self, node: SqlDateTruncExpression) -> SqlExpressionRenderResult:  # noqa: D
         """ClickHouse uses toStartOf* functions instead of DATE_TRUNC."""
         arg_rendered = self.render_sql_expr(node.arg)
-        if node.time_granularity == TimeGranularity.DAY:
-            sql = f"toStartOfDay({arg_rendered.sql})"
-        elif node.time_granularity == TimeGranularity.WEEK:
-            sql = f"toStartOfWeek({arg_rendered.sql}, 1)"  # 1 = Monday
-        elif node.time_granularity == TimeGranularity.MONTH:
-            sql = f"toStartOfMonth({arg_rendered.sql})"
-        elif node.time_granularity == TimeGranularity.QUARTER:
-            sql = f"toStartOfQuarter({arg_rendered.sql})"
-        elif node.time_granularity == TimeGranularity.YEAR:
-            sql = f"toStartOfYear({arg_rendered.sql})"
-        else:
-            sql = f"toStartOfDay({arg_rendered.sql})"
         return SqlExpressionRenderResult(
-            sql=sql,
+            sql=self._render_to_start_of(arg_rendered.sql, node.time_granularity),
             execution_parameters=arg_rendered.execution_parameters,
         )
 
     def visit_time_delta_expr(self, node: SqlTimeDeltaExpression) -> SqlExpressionRenderResult:  # noqa: D
         arg_rendered = node.arg.accept(self)
         if node.grain_to_date:
-            if node.granularity == TimeGranularity.DAY:
-                sql = f"toStartOfDay({arg_rendered.sql})"
-            elif node.granularity == TimeGranularity.WEEK:
-                sql = f"toStartOfWeek({arg_rendered.sql}, 1)"
-            elif node.granularity == TimeGranularity.MONTH:
-                sql = f"toStartOfMonth({arg_rendered.sql})"
-            elif node.granularity == TimeGranularity.QUARTER:
-                sql = f"toStartOfQuarter({arg_rendered.sql})"
-            elif node.granularity == TimeGranularity.YEAR:
-                sql = f"toStartOfYear({arg_rendered.sql})"
-            else:
-                sql = f"toStartOfDay({arg_rendered.sql})"
             return SqlExpressionRenderResult(
-                sql=sql,
+                sql=self._render_to_start_of(arg_rendered.sql, node.granularity),
                 execution_parameters=arg_rendered.execution_parameters,
             )
 

@@ -139,10 +139,10 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
                     elif isinstance(value, str):
                         escaped_value = value.replace("'", "''")
                         values.append(f"'{escaped_value}'")
-                    elif isinstance(value, (int, float)):
-                        values.append(str(value))
                     elif isinstance(value, bool):
                         values.append("1" if value else "0")
+                    elif isinstance(value, (int, float)):
+                        values.append(str(value))
                     else:
                         values.append(f"'{str(value)}'")
                 values_list.append(f"({', '.join(values)})")
@@ -158,9 +158,13 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
         stmt: str,
         bind_params: SqlBindParameters,
         isolation_level: Optional[SqlIsolationLevel] = None,
-        system_tags: SqlRequestTagSet = SqlRequestTagSet(),
-        extra_tags: SqlJsonTag = SqlJsonTag(),
+        system_tags: Optional[SqlRequestTagSet] = None,
+        extra_tags: Optional[SqlJsonTag] = None,
     ) -> pd.DataFrame:
+        if system_tags is None:
+            system_tags = SqlRequestTagSet()
+        if extra_tags is None:
+            extra_tags = SqlJsonTag()
         with self._engine_connection(
             self._engine, isolation_level=isolation_level, system_tags=system_tags, extra_tags=extra_tags
         ) as conn:
@@ -168,7 +172,8 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
 
     def list_tables(self, schema_name: str) -> Sequence[str]:  # noqa: D
         df = self.query(
-            f"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{schema_name}' ORDER BY TABLE_NAME"
+            "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = :schema ORDER BY TABLE_NAME",
+            sql_bind_parameters=SqlBindParameters.create_from_dict({"schema": schema_name}),
         )
         return list(df["TABLE_NAME"])
 

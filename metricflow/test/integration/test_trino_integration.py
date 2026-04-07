@@ -59,7 +59,7 @@ class TestTrinoDictConfigHandler:
         )
         assert config[CONFIG_DWH_DIALECT] == "trino"
         assert config[CONFIG_DWH_HOST] == "trino-host"
-        assert config[CONFIG_DWH_PORT] == "8080"
+        assert config[CONFIG_DWH_PORT] == "8090"
         assert config[CONFIG_DWH_USER] == "trino"
         assert config[CONFIG_DWH_PASSWORD] == ""
         assert config[CONFIG_DWH_DB] == "memory"
@@ -118,7 +118,7 @@ class TestTrinoClientFromConfig:
             assert "trino://" in url
             assert "trino" in url
             assert "trino-host" in url
-            assert "8080" in url
+            assert "8090" in url
             assert "memory" in url
             assert password == ""
 
@@ -240,7 +240,7 @@ def trino_client():
     """Module-scoped fixture for a live Trino client."""
     client = _make_trino_client()
     if client is None:
-        pytest.skip("Trino Docker not available at localhost:8080")
+        pytest.skip("Trino Docker not available at localhost:8090")
     yield client
     client.close()
 

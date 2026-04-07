@@ -79,10 +79,11 @@ class TrinoSqlClient(SqlAlchemySqlClient):
         host: str,
         password: str = "",
     ) -> None:
-        # Trino URL format: trino://user@host:port/catalog
+        # Trino URL format: trino://user:password@host:port/catalog
         connect_url = sqlalchemy.engine.url.URL.create(
             drivername="trino",
             username=username,
+            password=password if password else None,
             host=host,
             port=port,
             database=catalog,
@@ -160,9 +161,13 @@ class TrinoSqlClient(SqlAlchemySqlClient):
         stmt: str,
         bind_params: SqlBindParameters,
         isolation_level: Optional[SqlIsolationLevel] = None,
-        system_tags: SqlRequestTagSet = SqlRequestTagSet(),
-        extra_tags: SqlJsonTag = SqlJsonTag(),
+        system_tags: Optional[SqlRequestTagSet] = None,
+        extra_tags: Optional[SqlJsonTag] = None,
     ) -> pd.DataFrame:
+        if system_tags is None:
+            system_tags = SqlRequestTagSet()
+        if extra_tags is None:
+            extra_tags = SqlJsonTag()
         with self._engine_connection(
             self._engine, isolation_level=isolation_level, system_tags=system_tags, extra_tags=extra_tags
         ) as conn:

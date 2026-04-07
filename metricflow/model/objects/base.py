@@ -113,7 +113,7 @@ class PydanticCustomInputParser(ABC, Generic[ModelObjectT_co]):
     and validation of that model object itself.
     """
 
-    @model_validator(mode='wrap')
+    @model_validator(mode="wrap")
     @classmethod
     def _pydantic_v2_custom_parse(cls, value, handler):
         """Pydantic v2 wrap validator for custom input parsing.

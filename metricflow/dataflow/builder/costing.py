@@ -6,7 +6,6 @@ definition instances) because data sets could include an overlapping set of meas
 Knowing the cost of a dataflow plan can be used to order the possible plans for optimal execution.
 """
 
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

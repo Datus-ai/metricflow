@@ -82,7 +82,7 @@ def build_config_dict_from_db_params(
         db_path = uri
         prefix = f"{db_type_lower}:///"
         if db_path.startswith(prefix):
-            db_path = db_path[len(prefix):]
+            db_path = db_path[len(prefix) :]
         result[CONFIG_DWH_DB] = os.path.expanduser(db_path)
     else:
         result[CONFIG_DWH_DB] = database
@@ -122,6 +122,7 @@ class DictConfigHandler(YamlFileHandler):
     """
 
     def __init__(self, config_dict: Dict[str, str]) -> None:
+        """Initialize DictConfigHandler with a pre-built config dict."""
         self._config_dict = config_dict
         super().__init__(yaml_file_path=self._get_dummy_config_path())
 

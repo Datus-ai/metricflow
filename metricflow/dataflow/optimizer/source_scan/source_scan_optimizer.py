@@ -293,9 +293,11 @@ class SourceScanOptimizer(
             # Otherwise, replaced the branch with the one that was combined in combined_parent_branches
             else:
                 combined_parent_branches = [
-                    branch_combination_result.left_branch
-                    if branch_combination_result.combined_branch is None
-                    else branch_combination_result.combined_branch
+                    (
+                        branch_combination_result.left_branch
+                        if branch_combination_result.combined_branch is None
+                        else branch_combination_result.combined_branch
+                    )
                     for branch_combination_result in combination_results
                 ]
 

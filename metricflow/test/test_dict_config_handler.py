@@ -1,7 +1,5 @@
 import pathlib
 
-import pytest
-
 from metricflow.configuration.constants import (
     CONFIG_DWH_ACCOUNT,
     CONFIG_DWH_DB,
@@ -163,10 +161,12 @@ class TestDictConfigHandler:
     """Tests for DictConfigHandler."""
 
     def test_get_value_returns_from_dict(self):
-        handler = DictConfigHandler({
-            CONFIG_DWH_DIALECT: "mysql",
-            CONFIG_DWH_HOST: "localhost",
-        })
+        handler = DictConfigHandler(
+            {
+                CONFIG_DWH_DIALECT: "mysql",
+                CONFIG_DWH_HOST: "localhost",
+            }
+        )
         assert handler.get_value(CONFIG_DWH_DIALECT) == "mysql"
         assert handler.get_value(CONFIG_DWH_HOST) == "localhost"
 

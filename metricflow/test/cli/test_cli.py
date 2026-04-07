@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date
 from unittest.mock import patch, MagicMock
 
 from metricflow.cli.cli_context import CLIContext

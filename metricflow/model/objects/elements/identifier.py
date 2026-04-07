@@ -43,12 +43,12 @@ class Identifier(HashableBaseModel, ModelWithMetadataParsing):
     expr: Optional[str] = None
     metadata: Optional[Metadata] = None
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def default_entity_value(cls, values: Any) -> Any:
         """Default entity to name when not provided."""
-        if isinstance(values, dict) and values.get('entity') is None and 'name' in values:
-            values['entity'] = values['name']
+        if isinstance(values, dict) and values.get("entity") is None and "name" in values:
+            values["entity"] = values["name"]
         return values
 
     @property

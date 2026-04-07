@@ -100,17 +100,13 @@ class GreenplumSqlClient(SqlAlchemySqlClient):
     def list_tables(self, schema_name: str) -> Sequence[str]:  # noqa: D
         # Greenplum 4.x (PG 8.2) lacks pg_class.relpersistence, so SQLAlchemy's
         # inspect().get_table_names() fails. Use a compatible query instead.
-        df = self.query(
-            f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema_name}' ORDER BY tablename"
-        )
+        df = self.query(f"SELECT tablename FROM pg_tables WHERE schemaname = '{schema_name}' ORDER BY tablename")
         return list(df["tablename"])
 
     def create_schema(self, schema_name: str) -> None:  # noqa: D
         # Greenplum 4.x (PG 8.2) does not support CREATE SCHEMA IF NOT EXISTS.
         # Check existence first, then create if needed.
-        result = self.query(
-            f"SELECT 1 FROM pg_namespace WHERE nspname = '{schema_name}'"
-        )
+        result = self.query(f"SELECT 1 FROM pg_namespace WHERE nspname = '{schema_name}'")
         if len(result) == 0:
             self.execute(f"CREATE SCHEMA {schema_name}")
 

@@ -21,11 +21,25 @@ logger = logging.getLogger(__name__)
 
 class FilesystemConfig(BaseModel):
     """Filesystem configuration model"""
-    root_path: str = Field(default_factory=lambda: os.getenv('FILESYSTEM_ROOT_PATH', os.path.expanduser("~")))
-    allowed_extensions: List[str] = Field(default_factory=lambda: [
-        ".txt", ".md", ".py", ".js", ".ts", ".json", ".yaml", ".yml",
-        ".csv", ".sql", ".html", ".css", ".xml"
-    ])
+
+    root_path: str = Field(default_factory=lambda: os.getenv("FILESYSTEM_ROOT_PATH", os.path.expanduser("~")))
+    allowed_extensions: List[str] = Field(
+        default_factory=lambda: [
+            ".txt",
+            ".md",
+            ".py",
+            ".js",
+            ".ts",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".csv",
+            ".sql",
+            ".html",
+            ".css",
+            ".xml",
+        ]
+    )
     max_file_size: int = 1024 * 1024  # 1MB default
 
 
@@ -55,8 +69,6 @@ def _is_allowed_file(config: FilesystemConfig, file_path: Path) -> bool:
     return file_path.suffix.lower() in config.allowed_extensions
 
 
-
-
 # Define MCP tools
 @server.list_tools()
 async def handle_list_tools():
@@ -67,14 +79,9 @@ async def handle_list_tools():
             description="Read the contents of a file",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The path of the file to read"
-                    }
-                },
-                "required": ["path"]
-            }
+                "properties": {"path": {"type": "string", "description": "The path of the file to read"}},
+                "required": ["path"],
+            },
         ),
         types.Tool(
             name="read_multiple_files",
@@ -82,14 +89,10 @@ async def handle_list_tools():
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "paths": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of file paths to read"
-                    }
+                    "paths": {"type": "array", "items": {"type": "string"}, "description": "List of file paths to read"}
                 },
-                "required": ["paths"]
-            }
+                "required": ["paths"],
+            },
         ),
         types.Tool(
             name="write_file",
@@ -97,17 +100,11 @@ async def handle_list_tools():
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The path of the file to write"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "The content to write to the file"
-                    }
+                    "path": {"type": "string", "description": "The path of the file to write"},
+                    "content": {"type": "string", "description": "The content to write to the file"},
                 },
-                "required": ["path", "content"]
-            }
+                "required": ["path", "content"],
+            },
         ),
         types.Tool(
             name="edit_file",
@@ -115,67 +112,49 @@ async def handle_list_tools():
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The path of the file to edit"
-                    },
+                    "path": {"type": "string", "description": "The path of the file to edit"},
                     "edits": {
                         "type": "array",
                         "items": {
                             "type": "object",
                             "properties": {
                                 "oldText": {"type": "string", "description": "Text to replace"},
-                                "newText": {"type": "string", "description": "New text"}
+                                "newText": {"type": "string", "description": "New text"},
                             },
-                            "required": ["oldText", "newText"]
+                            "required": ["oldText", "newText"],
                         },
-                        "description": "List of edits to apply"
-                    }
+                        "description": "List of edits to apply",
+                    },
                 },
-                "required": ["path", "edits"]
-            }
+                "required": ["path", "edits"],
+            },
         ),
         types.Tool(
             name="create_directory",
             description="Create a new directory or ensure it exists",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The path of the directory to create"
-                    }
-                },
-                "required": ["path"]
-            }
+                "properties": {"path": {"type": "string", "description": "The path of the directory to create"}},
+                "required": ["path"],
+            },
         ),
         types.Tool(
             name="list_directory",
             description="List the contents of a directory",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The path of the directory to list"
-                    }
-                },
-                "required": ["path"]
-            }
+                "properties": {"path": {"type": "string", "description": "The path of the directory to list"}},
+                "required": ["path"],
+            },
         ),
         types.Tool(
             name="directory_tree",
             description="Get a tree view of a directory",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The path of the directory to analyze"
-                    }
-                },
-                "required": ["path"]
-            }
+                "properties": {"path": {"type": "string", "description": "The path of the directory to analyze"}},
+                "required": ["path"],
+            },
         ),
         types.Tool(
             name="move_file",
@@ -183,18 +162,12 @@ async def handle_list_tools():
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "source": {
-                        "type": "string",
-                        "description": "The current path of the file or directory"
-                    },
-                    "destination": {
-                        "type": "string",
-                        "description": "The new path for the file or directory"
-                    }
+                    "source": {"type": "string", "description": "The current path of the file or directory"},
+                    "destination": {"type": "string", "description": "The new path for the file or directory"},
                 },
-                "required": ["source", "destination"]
-            }
-        )
+                "required": ["source", "destination"],
+            },
+        ),
     ]
 
 
@@ -221,7 +194,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
                 return [types.TextContent(type="text", text=f"File too large: {path}")]
 
             try:
-                content = target_path.read_text(encoding='utf-8')
+                content = target_path.read_text(encoding="utf-8")
                 return [types.TextContent(type="text", text=content)]
             except UnicodeDecodeError:
                 return [types.TextContent(type="text", text=f"Cannot read binary file: {path}")]
@@ -247,7 +220,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
                     continue
 
                 try:
-                    content = target_path.read_text(encoding='utf-8')
+                    content = target_path.read_text(encoding="utf-8")
                     results.append(f"=== {path} ===\n{content}")
                 except UnicodeDecodeError:
                     results.append(f"Cannot read binary file: {path}")
@@ -269,7 +242,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
 
             try:
                 target_path.parent.mkdir(parents=True, exist_ok=True)
-                target_path.write_text(content, encoding='utf-8')
+                target_path.write_text(content, encoding="utf-8")
                 return [types.TextContent(type="text", text=f"File written successfully: {path}")]
             except PermissionError:
                 return [types.TextContent(type="text", text=f"Permission denied: {path}")]
@@ -289,14 +262,14 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
                 return [types.TextContent(type="text", text=f"File type not allowed: {path}")]
 
             try:
-                content = target_path.read_text(encoding='utf-8')
+                content = target_path.read_text(encoding="utf-8")
 
                 for edit in edits:
                     old_text = edit["oldText"]
                     new_text = edit["newText"]
                     content = content.replace(old_text, new_text)
 
-                target_path.write_text(content, encoding='utf-8')
+                target_path.write_text(content, encoding="utf-8")
                 return [types.TextContent(type="text", text=f"File edited successfully: {path}")]
             except UnicodeDecodeError:
                 return [types.TextContent(type="text", text=f"Cannot edit binary file: {path}")]
@@ -348,6 +321,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
                 return [types.TextContent(type="text", text=f"Path is not a directory: {path}")]
 
             try:
+
                 def build_tree(dir_path: Path, prefix: str = "") -> List[str]:
                     lines = []
                     items = sorted(dir_path.iterdir())
@@ -364,7 +338,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
                             try:
                                 size = item.stat().st_size
                                 lines.append(f"{prefix}{current_prefix}{item.name} ({size} bytes)")
-                            except:
+                            except Exception:
                                 lines.append(f"{prefix}{current_prefix}{item.name}")
 
                     return lines
@@ -393,7 +367,7 @@ async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent
                 source_path.rename(dest_path)
                 return [types.TextContent(type="text", text=f"Moved {source} to {destination}")]
             except PermissionError:
-                return [types.TextContent(type="text", text=f"Permission denied")]
+                return [types.TextContent(type="text", text="Permission denied")]
             except OSError as e:
                 return [types.TextContent(type="text", text=f"Move failed: {e}")]
 
@@ -410,7 +384,7 @@ def create_filesystem_app(root_path: str = None):
 
     # Update config if root_path is provided
     if root_path:
-        os.environ['FILESYSTEM_ROOT_PATH'] = root_path
+        os.environ["FILESYSTEM_ROOT_PATH"] = root_path
 
     # Create basic FastAPI app for MCP support
     app = FastAPI(title="Filesystem MCP Server")
@@ -423,17 +397,13 @@ def create_filesystem_app(root_path: str = None):
             "status": "running",
             "root_path": config.root_path,
             "endpoints": {"mcp": "/mcp", "health": "/health"},
-            "available_methods": ["initialize", "notifications/initialized", "tools/list", "tools/call"]
+            "available_methods": ["initialize", "notifications/initialized", "tools/list", "tools/call"],
         }
 
     @app.get("/health")
     async def health():
         config = FilesystemConfig()
-        return {
-            "status": "healthy",
-            "root_path": config.root_path,
-            "root_exists": Path(config.root_path).exists()
-        }
+        return {"status": "healthy", "root_path": config.root_path, "root_exists": Path(config.root_path).exists()}
 
     @app.post("/mcp")
     async def handle_mcp_request(request_data: dict):
@@ -451,8 +421,8 @@ def create_filesystem_app(root_path: str = None):
                     "result": {
                         "protocolVersion": "2024-11-05",
                         "capabilities": {"tools": {}, "prompts": {}},
-                        "serverInfo": {"name": "Filesystem MCP Server", "version": "0.1.0"}
-                    }
+                        "serverInfo": {"name": "Filesystem MCP Server", "version": "0.1.0"},
+                    },
                 }
 
             # Initialize notification (no response needed)
@@ -476,14 +446,14 @@ def create_filesystem_app(root_path: str = None):
                 return {
                     "jsonrpc": "2.0",
                     "id": request_id,
-                    "error": {"code": -32601, "message": f"Method not found: {method}"}
+                    "error": {"code": -32601, "message": f"Method not found: {method}"},
                 }
 
         except Exception as e:
             return {
                 "jsonrpc": "2.0",
                 "id": request_data.get("id"),
-                "error": {"code": -32603, "message": f"Internal error: {str(e)}"}
+                "error": {"code": -32603, "message": f"Internal error: {str(e)}"},
             }
 
     # Store references for use in tools
@@ -497,7 +467,7 @@ if __name__ == "__main__":
     import sys
 
     # Get root path from command line argument or environment
-    root_path = sys.argv[1] if len(sys.argv) > 1 else os.getenv('FILESYSTEM_ROOT_PATH')
+    root_path = sys.argv[1] if len(sys.argv) > 1 else os.getenv("FILESYSTEM_ROOT_PATH")
 
     # Create the FastAPI app
     app = create_filesystem_app(root_path)

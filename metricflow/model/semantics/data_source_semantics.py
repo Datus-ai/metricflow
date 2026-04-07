@@ -40,9 +40,9 @@ class DataSourceSemantics:
     ) -> None:
         self._model = model
         self._measure_index: Dict[MeasureReference, List[DataSource]] = defaultdict(list)
-        self._measure_aggs: Dict[
-            MeasureReference, AggregationType
-        ] = {}  # maps measures to their one consistent aggregation
+        self._measure_aggs: Dict[MeasureReference, AggregationType] = (
+            {}
+        )  # maps measures to their one consistent aggregation
         self._measure_agg_time_dimension: Dict[MeasureReference, TimeDimensionReference] = {}
         self._measure_non_additive_dimension_specs: Dict[MeasureReference, NonAdditiveDimensionSpec] = {}
         self._dimension_index: Dict[DimensionReference, List[DataSource]] = defaultdict(list)

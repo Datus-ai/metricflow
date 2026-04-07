@@ -5,12 +5,10 @@ A Model Context Protocol server that wraps MetricFlow functionality
 and exposes it via tools and resources with SSE support.
 """
 
-import json
 import logging
 import os
 import subprocess
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mcp.server import Server
 from mcp import types
@@ -28,6 +26,7 @@ class MetricFlowConfig(BaseModel):
     Note: Only model_path is actually used by MetricFlow via MF_MODEL_PATH env var.
     Other configs are kept for reference but not passed to MetricFlow commands.
     """
+
     model_path: str = Field(default_factory=lambda: os.path.expanduser("~/.metricflow/semantic_models"))
     config_file: str = Field(default_factory=lambda: os.path.expanduser("~/.metricflow/config.yml"))
 
@@ -49,34 +48,18 @@ def _run_mf_command(command: List[str]) -> Dict[str, Any]:
         env.update({"MF_MODEL_PATH": config.model_path})
 
         # Run the command
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=300  # 5 minute timeout
-        )
+        result = subprocess.run(command, capture_output=True, text=True, env=env, timeout=300)  # 5 minute timeout
 
         return {
             "success": result.returncode == 0,
             "stdout": result.stdout,
             "stderr": result.stderr,
-            "returncode": result.returncode
+            "returncode": result.returncode,
         }
     except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "stdout": "",
-            "stderr": "Command timed out after 5 minutes",
-            "returncode": -1
-        }
+        return {"success": False, "stdout": "", "stderr": "Command timed out after 5 minutes", "returncode": -1}
     except Exception as e:
-        return {
-            "success": False,
-            "stdout": "",
-            "stderr": str(e),
-            "returncode": -1
-        }
+        return {"success": False, "stdout": "", "stderr": str(e), "returncode": -1}
 
 
 # Resources removed - not needed

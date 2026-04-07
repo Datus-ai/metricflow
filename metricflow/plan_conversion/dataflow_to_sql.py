@@ -217,13 +217,15 @@ class DataflowToSqlQueryPlanConverter(Generic[SqlDataSetT], DataflowPlanNodeVisi
                     from_source_alias=time_spine_table_alias,
                     joins_descs=(),
                     group_bys=(),
-                    where=_make_time_range_comparison_expr(
-                        table_alias=time_spine_table_alias,
-                        column_alias=time_spine_source.time_column_name,
-                        time_range_constraint=time_range_constraint,
-                    )
-                    if time_range_constraint
-                    else None,
+                    where=(
+                        _make_time_range_comparison_expr(
+                            table_alias=time_spine_table_alias,
+                            column_alias=time_spine_source.time_column_name,
+                            time_range_constraint=time_range_constraint,
+                        )
+                        if time_range_constraint
+                        else None
+                    ),
                     order_bys=(),
                 ),
             )
@@ -253,13 +255,15 @@ class DataflowToSqlQueryPlanConverter(Generic[SqlDataSetT], DataflowPlanNodeVisi
                     from_source_alias=time_spine_table_alias,
                     joins_descs=(),
                     group_bys=select_columns,
-                    where=_make_time_range_comparison_expr(
-                        table_alias=time_spine_table_alias,
-                        column_alias=time_spine_source.time_column_name,
-                        time_range_constraint=time_range_constraint,
-                    )
-                    if time_range_constraint
-                    else None,
+                    where=(
+                        _make_time_range_comparison_expr(
+                            table_alias=time_spine_table_alias,
+                            column_alias=time_spine_source.time_column_name,
+                            time_range_constraint=time_range_constraint,
+                        )
+                        if time_range_constraint
+                        else None
+                    ),
                     order_bys=(),
                 ),
             )
@@ -1137,9 +1141,9 @@ class DataflowToSqlQueryPlanConverter(Generic[SqlDataSetT], DataflowPlanNodeVisi
                     spec=metric_time_dimension_spec,
                 )
             )
-            output_column_to_input_column[
-                metric_time_dimension_column_association.column_name
-            ] = matching_time_dimension_instance.associated_column.column_name
+            output_column_to_input_column[metric_time_dimension_column_association.column_name] = (
+                matching_time_dimension_instance.associated_column.column_name
+            )
         output_instance_set = InstanceSet(
             measure_instances=tuple(output_measure_instances),
             dimension_instances=input_data_set.instance_set.dimension_instances,

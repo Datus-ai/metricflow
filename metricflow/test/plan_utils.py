@@ -25,6 +25,7 @@ PLACEHOLDER_CHAR_FOR_INCOMPARABLE_STRINGS = "*"
 
 def make_schema_replacement_function(system_schema: str, source_schema: str) -> Callable[[str], str]:
     """Generates a function to replace schema names in test outputs."""
+
     # The schema of the warehouse used in tests changes from run to run, so don't compare those.
     def replacement_function(text: str) -> str:  # noqa: D
         # Replace with a string of the same length so that indents are preserved.
@@ -157,7 +158,7 @@ def assert_snapshot_text_equal(
         + snapshot_file_extension
     )
 
-    if incomparable_strings_replacement_function:
+    if incomparable_strings_replacement_function is not None:
         snapshot_text = incomparable_strings_replacement_function(snapshot_text)
 
     # If we are in overwrite mode, make a new plan:

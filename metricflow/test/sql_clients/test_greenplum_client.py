@@ -4,6 +4,7 @@ Unit tests (no database required) verify client construction, engine attributes,
 and configuration mapping. Integration tests (require a Greenplum database) are
 marked with @pytest.mark.greenplum and verify actual database operations.
 """
+
 import pytest
 
 from metricflow.protocols.sql_client import SqlEngine
@@ -102,4 +103,5 @@ class TestGreenplumConfigMapping:
     def test_greenplum_in_sql_utils_factory(self) -> None:
         """Verify GreenplumSqlClient is importable from sql_clients package."""
         from metricflow.sql_clients import GreenplumSqlClient as ImportedClient
+
         assert ImportedClient is GreenplumSqlClient

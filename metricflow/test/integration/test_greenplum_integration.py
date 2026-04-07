@@ -5,6 +5,7 @@ Tests the full flow: config -> client creation -> SQL rendering -> query executi
 - Tests marked with @pytest.mark.greenplum require a real Greenplum instance.
   Uses Docker env from datus-greenplum: localhost:15432, gpadmin/pivotal.
 """
+
 import os
 import shutil
 import tempfile
@@ -21,7 +22,6 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_PORT,
     CONFIG_DWH_SCHEMA,
     CONFIG_DWH_USER,
-    CONFIG_MODEL_PATH,
 )
 from metricflow.configuration.dict_config_handler import (
     DictConfigHandler,
@@ -112,9 +112,7 @@ class TestGreenplumClientFromConfig:
         )
         handler = DictConfigHandler(config_dict)
 
-        with patch.object(
-            GreenplumSqlClient, "from_connection_details", return_value=MagicMock()
-        ) as mock_factory:
+        with patch.object(GreenplumSqlClient, "from_connection_details", return_value=MagicMock()) as mock_factory:
             make_sql_client_from_config(handler)
             mock_factory.assert_called_once()
             call_args = mock_factory.call_args
@@ -208,10 +206,8 @@ class TestGreenplumCliSetupDialect:
 
     def test_greenplum_in_cli_dialect_map(self) -> None:
         from metricflow.cli.utils import MF_GREENPLUM_KEYS
-        assert any(
-            k.key == CONFIG_DWH_DIALECT and k.value == SqlDialect.GREENPLUM.value
-            for k in MF_GREENPLUM_KEYS
-        )
+
+        assert any(k.key == CONFIG_DWH_DIALECT and k.value == SqlDialect.GREENPLUM.value for k in MF_GREENPLUM_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -287,9 +283,7 @@ class TestGreenplumLiveDatabase:
 
     def test_query_with_date_trunc(self, gp_client):
         """Verify DATE_TRUNC works on Greenplum (common in metric queries)."""
-        df = gp_client.query(
-            "SELECT DATE_TRUNC('month', CAST('2024-03-15' AS TIMESTAMP)) AS metric_time"
-        )
+        df = gp_client.query("SELECT DATE_TRUNC('month', CAST('2024-03-15' AS TIMESTAMP)) AS metric_time")
         assert len(df) == 1
 
     def test_query_with_percentile(self, gp_client):
@@ -454,12 +448,10 @@ class TestGreenplumValidateConfigs:
         from metricflow.engine.utils import model_build_result_from_config
 
         handler = _build_gp_handler_with_models(gp_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
-        assert not build_result.issues.has_blocking_issues, (
-            f"Model build had blocking issues: {build_result.issues.summary()}"
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
+        assert (
+            not build_result.issues.has_blocking_issues
+        ), f"Model build had blocking issues: {build_result.issues.summary()}"
 
     def test_semantic_validation(self, gp_model_dir):
         """validate-configs step 3: semantic validation passes."""
@@ -467,13 +459,11 @@ class TestGreenplumValidateConfigs:
         from metricflow.model.model_validator import ModelValidator
 
         handler = _build_gp_handler_with_models(gp_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
         semantic_result = ModelValidator().validate_model(build_result.model)
-        assert not semantic_result.issues.has_blocking_issues, (
-            f"Semantic validation had blocking issues: {semantic_result.issues.summary()}"
-        )
+        assert (
+            not semantic_result.issues.has_blocking_issues
+        ), f"Semantic validation had blocking issues: {semantic_result.issues.summary()}"
 
     def test_data_warehouse_validation(self, gp_client, gp_model_dir, gp_sample_data):
         """validate-configs step 4: DW validation checks tables/columns exist."""
@@ -482,13 +472,9 @@ class TestGreenplumValidateConfigs:
         from metricflow.model.validations.validator_helpers import ModelValidationResults
 
         handler = _build_gp_handler_with_models(gp_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
         model = build_result.model
-        dw_validator = DataWarehouseModelValidator(
-            sql_client=gp_client, system_schema=GP_SCHEMA
-        )
+        dw_validator = DataWarehouseModelValidator(sql_client=gp_client, system_schema=GP_SCHEMA)
         # Run all DW validations (same as _data_warehouse_validations_runner in CLI)
         results = []
         for validate_fn in [
@@ -500,9 +486,7 @@ class TestGreenplumValidateConfigs:
             result = validate_fn(model, None)
             results.append(result)
         merged = ModelValidationResults.merge(results)
-        assert not merged.has_blocking_issues, (
-            f"DW validation had blocking issues: {merged.summary()}"
-        )
+        assert not merged.has_blocking_issues, f"DW validation had blocking issues: {merged.summary()}"
 
 
 # ---------------------------------------------------------------------------

@@ -297,9 +297,9 @@ class DataClassTypeToPydanticTypeConverter:  # noqa: D
 
     def to_pydantic_type(self, dataclass_type: Type[SerializableDataclass]) -> Type[BaseModel]:  # noqa: D
         if dataclass_type not in self._dataclass_type_to_pydantic_type:
-            self._dataclass_type_to_pydantic_type[
-                dataclass_type
-            ] = DataClassTypeToPydanticTypeConverter._convert_dataclass_type_to_pydantic_type(dataclass_type)
+            self._dataclass_type_to_pydantic_type[dataclass_type] = (
+                DataClassTypeToPydanticTypeConverter._convert_dataclass_type_to_pydantic_type(dataclass_type)
+            )
         return self._dataclass_type_to_pydantic_type[dataclass_type]
 
     @staticmethod

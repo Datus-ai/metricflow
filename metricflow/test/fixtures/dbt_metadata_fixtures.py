@@ -1,7 +1,10 @@
 import pytest
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
-from dbt_metadata_client.dbt_metadata_api_schema import MetricNode
+try:
+    from dbt_metadata_client.dbt_metadata_api_schema import MetricNode
+except ImportError:
+    MetricNode = None  # type: ignore[assignment, misc]
 
 
 @pytest.fixture
@@ -147,7 +150,9 @@ def dbt_json_metrics(  # type: ignore[misc]
 
 
 @pytest.fixture
-def dbt_metrics(dbt_json_metrics: List[Dict[str, Any]]) -> Tuple[MetricNode, ...]:  # type: ignore[misc]
+def dbt_metrics(dbt_json_metrics: List[Dict[str, Any]]) -> Any:  # type: ignore[misc]
     """A list of dbt MetricNodes"""
-    metric_nodes: Tuple[MetricNode, ...] = tuple(MetricNode(json_data=metric_json) for metric_json in dbt_json_metrics)
+    if MetricNode is None:
+        pytest.skip("dbt_metadata_client not installed")
+    metric_nodes = tuple(MetricNode(json_data=metric_json) for metric_json in dbt_json_metrics)
     return metric_nodes

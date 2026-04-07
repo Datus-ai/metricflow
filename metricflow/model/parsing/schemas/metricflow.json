@@ -149,7 +149,7 @@
             "anyOf": [
                 {
                     "not": {
-                        "$ref": "#/definitions/is-time-dimension"
+                        "$ref": "dimension_schema#/definitions/is-time-dimension"
                     }
                 },
                 {
@@ -370,7 +370,7 @@
             "anyOf": [
                 {
                     "not": {
-                        "$ref": "#/definitions/is-tableau"
+                        "$ref": "materialization_destination_schema#/definitions/is-tableau"
                     }
                 },
                 {

@@ -106,6 +106,7 @@ class TrinoSqlClient(SqlAlchemySqlClient):
         logger.info(f"Creating table '{sql_table.sql}' from a DataFrame with {df.shape[0]} row(s)")
         start_time = time.time()
 
+        column_types = []
         column_definitions = []
         for col_name, dtype in df.dtypes.items():
             if dtype == "object":
@@ -120,12 +121,16 @@ class TrinoSqlClient(SqlAlchemySqlClient):
                 sql_type = "TIMESTAMP"
             else:
                 sql_type = "VARCHAR"
+            column_types.append(sql_type)
             column_definitions.append(f"{col_name} {sql_type}")
 
         create_table_sql = f"CREATE TABLE {sql_table.sql} ({', '.join(column_definitions)})"
         self.execute(create_table_sql)
 
-        chunk_size = chunk_size or 1000
+        if chunk_size is None:
+            chunk_size = 1000
+        elif chunk_size <= 0:
+            raise ValueError("chunk_size must be a positive integer")
         for start_idx in range(0, len(df), chunk_size):
             end_idx = min(start_idx + chunk_size, len(df))
             chunk_df = df.iloc[start_idx:end_idx]
@@ -133,21 +138,28 @@ class TrinoSqlClient(SqlAlchemySqlClient):
             values_list = []
             for _, row in chunk_df.iterrows():
                 values = []
-                for value in row:
+                for col_idx, value in enumerate(row):
+                    declared_type = column_types[col_idx]
                     if pd.isna(value):
                         values.append("NULL")
                     elif isinstance(value, bool):
-                        values.append("true" if value else "false")
+                        if declared_type == "BOOLEAN":
+                            values.append("true" if value else "false")
+                        else:
+                            values.append(f"'{'true' if value else 'false'}'")
                     elif isinstance(value, str):
                         escaped_value = value.replace("'", "''")
                         values.append(f"'{escaped_value}'")
                     elif isinstance(value, (int, float)):
                         values.append(str(value))
-                    elif hasattr(value, 'strftime'):
-                        # datetime/Timestamp: Trino requires explicit TIMESTAMP cast
-                        values.append(f"TIMESTAMP '{value.strftime('%Y-%m-%d %H:%M:%S')}'")
+                    elif hasattr(value, "strftime"):
+                        if declared_type == "TIMESTAMP":
+                            values.append(f"TIMESTAMP '{value.strftime('%Y-%m-%d %H:%M:%S')}'")
+                        else:
+                            values.append(f"'{value.strftime('%Y-%m-%d %H:%M:%S')}'")
                     else:
-                        values.append(f"'{str(value)}'")
+                        escaped_value = str(value).replace("'", "''")
+                        values.append(f"'{escaped_value}'")
                 values_list.append(f"({', '.join(values)})")
 
             if values_list:

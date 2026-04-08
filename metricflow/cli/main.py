@@ -29,12 +29,15 @@ from metricflow.cli.utils import (
     query_options,
     start_end_time_options,
     MF_BIGQUERY_KEYS,
+    MF_CLICKHOUSE_KEYS,
     MF_CONFIG_KEYS,
     MF_GREENPLUM_KEYS,
     MF_REDSHIFT_KEYS,
     MF_SNOWFLAKE_KEYS,
     MF_POSTGRESQL_KEYS,
     MF_DATABRICKS_KEYS,
+    MF_STARROCKS_KEYS,
+    MF_TRINO_KEYS,
 )
 from metricflow.configuration.config_builder import YamlTemplateBuilder
 from metricflow.configuration.constants import CONFIG_MODEL_PATH
@@ -176,6 +179,9 @@ def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
             SqlDialect.REDSHIFT.value: MF_REDSHIFT_KEYS,
             SqlDialect.POSTGRESQL.value: MF_POSTGRESQL_KEYS,
             SqlDialect.GREENPLUM.value: MF_GREENPLUM_KEYS,
+            SqlDialect.CLICKHOUSE.value: MF_CLICKHOUSE_KEYS,
+            SqlDialect.STARROCKS.value: MF_STARROCKS_KEYS,
+            SqlDialect.TRINO.value: MF_TRINO_KEYS,
             SqlDialect.DUCKDB.value: generate_duckdb_demo_keys(config_dir=cfg.config.dir_path),
             SqlDialect.DATABRICKS.value: MF_DATABRICKS_KEYS,
         }

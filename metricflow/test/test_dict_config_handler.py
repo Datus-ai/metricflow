@@ -48,7 +48,7 @@ class TestBuildConfigDictFromDbParams:
             password="pw",
             database="sr_db",
         )
-        assert result[CONFIG_DWH_DIALECT] == "mysql"
+        assert result[CONFIG_DWH_DIALECT] == "starrocks"
         assert result[CONFIG_DWH_SCHEMA] == "sr_db"
 
     def test_postgresql(self):

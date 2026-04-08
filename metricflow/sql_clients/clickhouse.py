@@ -129,15 +129,18 @@ class ClickHouseSqlClient(SqlAlchemySqlClient):
                 sql_type = "DateTime"
             else:
                 sql_type = "String"
-            column_definitions.append(f"`{col_name}` Nullable({sql_type})")
+            escaped_col_name = col_name.replace("`", "``")
+            column_definitions.append(f"`{escaped_col_name}` Nullable({sql_type})")
 
         create_table_sql = (
-            f"CREATE TABLE {sql_table.sql} ({', '.join(column_definitions)}) "
-            f"ENGINE = MergeTree() ORDER BY tuple()"
+            f"CREATE TABLE {sql_table.sql} ({', '.join(column_definitions)}) " f"ENGINE = MergeTree() ORDER BY tuple()"
         )
         self.execute(create_table_sql)
 
-        chunk_size = chunk_size or 1000
+        if chunk_size is None:
+            chunk_size = 1000
+        elif chunk_size <= 0:
+            raise ValueError("chunk_size must be a positive integer")
         for start_idx in range(0, len(df), chunk_size):
             end_idx = min(start_idx + chunk_size, len(df))
             chunk_df = df.iloc[start_idx:end_idx]
@@ -156,7 +159,8 @@ class ClickHouseSqlClient(SqlAlchemySqlClient):
                     elif isinstance(value, (int, float)):
                         values.append(str(value))
                     else:
-                        values.append(f"'{str(value)}'")
+                        escaped_value = str(value).replace("'", "''").replace("\\", "\\\\")
+                        values.append(f"'{escaped_value}'")
                 values_list.append(f"({', '.join(values)})")
 
             if values_list:
@@ -183,28 +187,29 @@ class ClickHouseSqlClient(SqlAlchemySqlClient):
             return pd.read_sql_query(sqlalchemy.text(stmt), conn, params=bind_params.param_dict)
 
     def list_tables(self, schema_name: str) -> Sequence[str]:  # noqa: D
-        df = self.query(f"SHOW TABLES FROM `{schema_name}`")
+        escaped_name = schema_name.replace("`", "``")
+        df = self.query(f"SHOW TABLES FROM `{escaped_name}`")
         if df.empty:
             return []
         return list(df.iloc[:, 0])
 
     def create_schema(self, schema_name: str) -> None:  # noqa: D
-        self.execute(f"CREATE DATABASE IF NOT EXISTS `{schema_name}`")
+        escaped_name = schema_name.replace("`", "``")
+        self.execute(f"CREATE DATABASE IF NOT EXISTS `{escaped_name}`")
 
     def drop_schema(self, schema_name: str, cascade: bool = True) -> None:  # noqa: D
+        escaped_name = schema_name.replace("`", "``")
         if not cascade:
             # Check if database has tables before dropping
             try:
-                df = self.query(f"SHOW TABLES FROM `{schema_name}`")
+                df = self.query(f"SHOW TABLES FROM `{escaped_name}`")
                 if not df.empty:
-                    raise RuntimeError(
-                        f"Cannot drop database `{schema_name}` without cascade: it contains tables"
-                    )
+                    raise RuntimeError(f"Cannot drop database `{schema_name}` without cascade: it contains tables")
             except Exception as e:
                 if "Cannot drop" in str(e):
                     raise
                 # Database doesn't exist or can't be queried — safe to proceed
-        self.execute(f"DROP DATABASE IF EXISTS `{schema_name}`")
+        self.execute(f"DROP DATABASE IF EXISTS `{escaped_name}`")
 
     def cancel_submitted_queries(self) -> None:  # noqa: D
         pass  # ClickHouse does not support query cancellation through this interface

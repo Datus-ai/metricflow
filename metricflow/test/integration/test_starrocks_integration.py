@@ -5,12 +5,14 @@ Tests the full flow: config -> client creation -> SQL rendering -> query executi
 - Tests marked with @pytest.mark.starrocks require a real StarRocks instance.
   Uses Docker env from datus-starrocks: localhost:9030, root/(empty password).
 """
+
 import os
 import shutil
 import tempfile
 from string import Template
 
 import pytest
+import sqlalchemy.exc
 from unittest.mock import patch, MagicMock
 
 from metricflow.configuration.constants import (
@@ -21,7 +23,6 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_PORT,
     CONFIG_DWH_SCHEMA,
     CONFIG_DWH_USER,
-    CONFIG_MODEL_PATH,
 )
 from metricflow.configuration.dict_config_handler import (
     DictConfigHandler,
@@ -107,9 +108,7 @@ class TestStarRocksClientFromConfig:
         )
         handler = DictConfigHandler(config_dict)
 
-        with patch.object(
-            StarRocksSqlClient, "from_connection_details", return_value=MagicMock()
-        ) as mock_factory:
+        with patch.object(StarRocksSqlClient, "from_connection_details", return_value=MagicMock()) as mock_factory:
             make_sql_client_from_config(handler)
             mock_factory.assert_called_once()
             call_args = mock_factory.call_args
@@ -168,10 +167,8 @@ class TestStarRocksCliSetupDialect:
 
     def test_starrocks_in_cli_dialect_map(self) -> None:
         from metricflow.cli.utils import MF_STARROCKS_KEYS
-        assert any(
-            k.key == CONFIG_DWH_DIALECT and k.value == SqlDialect.STARROCKS.value
-            for k in MF_STARROCKS_KEYS
-        )
+
+        assert any(k.key == CONFIG_DWH_DIALECT and k.value == SqlDialect.STARROCKS.value for k in MF_STARROCKS_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +186,7 @@ def _make_sr_client():
         client = StarRocksSqlClient.from_connection_details(url=SR_URL, password=SR_PASSWORD)
         client.query("SELECT 1")
         return client
-    except Exception:
+    except (sqlalchemy.exc.OperationalError, ConnectionError, OSError):
         return None
 
 
@@ -327,25 +324,21 @@ class TestStarRocksValidateConfigs:
         from metricflow.engine.utils import model_build_result_from_config
 
         handler = _build_sr_handler_with_models(sr_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
-        assert not build_result.issues.has_blocking_issues, (
-            f"Model build had blocking issues: {build_result.issues.summary()}"
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
+        assert (
+            not build_result.issues.has_blocking_issues
+        ), f"Model build had blocking issues: {build_result.issues.summary()}"
 
     def test_semantic_validation(self, sr_model_dir):
         from metricflow.engine.utils import model_build_result_from_config
         from metricflow.model.model_validator import ModelValidator
 
         handler = _build_sr_handler_with_models(sr_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
         semantic_result = ModelValidator().validate_model(build_result.model)
-        assert not semantic_result.issues.has_blocking_issues, (
-            f"Semantic validation had blocking issues: {semantic_result.issues.summary()}"
-        )
+        assert (
+            not semantic_result.issues.has_blocking_issues
+        ), f"Semantic validation had blocking issues: {semantic_result.issues.summary()}"
 
     def test_data_warehouse_validation(self, sr_client, sr_model_dir, sr_sample_data):
         from metricflow.engine.utils import model_build_result_from_config
@@ -353,13 +346,9 @@ class TestStarRocksValidateConfigs:
         from metricflow.model.validations.validator_helpers import ModelValidationResults
 
         handler = _build_sr_handler_with_models(sr_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
         model = build_result.model
-        dw_validator = DataWarehouseModelValidator(
-            sql_client=sr_client, system_schema=SR_SCHEMA
-        )
+        dw_validator = DataWarehouseModelValidator(sql_client=sr_client, system_schema=SR_SCHEMA)
         results = []
         for validate_fn in [
             dw_validator.validate_data_sources,
@@ -370,9 +359,7 @@ class TestStarRocksValidateConfigs:
             result = validate_fn(model, None)
             results.append(result)
         merged = ModelValidationResults.merge(results)
-        assert not merged.has_blocking_issues, (
-            f"DW validation had blocking issues: {merged.summary()}"
-        )
+        assert not merged.has_blocking_issues, f"DW validation had blocking issues: {merged.summary()}"
 
 
 @pytest.mark.starrocks

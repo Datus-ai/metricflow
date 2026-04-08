@@ -5,6 +5,7 @@ Tests the full flow: config -> client creation -> SQL rendering -> query executi
 - Tests marked with @pytest.mark.clickhouse require a real ClickHouse instance.
   Uses Docker env from datus-clickhouse: localhost:8123, default_user/default_test.
 """
+
 import os
 import shutil
 import tempfile
@@ -22,7 +23,6 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_PORT,
     CONFIG_DWH_SCHEMA,
     CONFIG_DWH_USER,
-    CONFIG_MODEL_PATH,
 )
 from metricflow.configuration.dict_config_handler import (
     DictConfigHandler,
@@ -108,9 +108,7 @@ class TestClickHouseClientFromConfig:
         )
         handler = DictConfigHandler(config_dict)
 
-        with patch.object(
-            ClickHouseSqlClient, "from_connection_details", return_value=MagicMock()
-        ) as mock_factory:
+        with patch.object(ClickHouseSqlClient, "from_connection_details", return_value=MagicMock()) as mock_factory:
             make_sql_client_from_config(handler)
             mock_factory.assert_called_once()
             call_args = mock_factory.call_args
@@ -199,10 +197,8 @@ class TestClickHouseCliSetupDialect:
 
     def test_clickhouse_in_cli_dialect_map(self) -> None:
         from metricflow.cli.utils import MF_CLICKHOUSE_KEYS
-        assert any(
-            k.key == CONFIG_DWH_DIALECT and k.value == SqlDialect.CLICKHOUSE.value
-            for k in MF_CLICKHOUSE_KEYS
-        )
+
+        assert any(k.key == CONFIG_DWH_DIALECT and k.value == SqlDialect.CLICKHOUSE.value for k in MF_CLICKHOUSE_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -358,25 +354,21 @@ class TestClickHouseValidateConfigs:
         from metricflow.engine.utils import model_build_result_from_config
 
         handler = _build_ch_handler_with_models(ch_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
-        assert not build_result.issues.has_blocking_issues, (
-            f"Model build had blocking issues: {build_result.issues.summary()}"
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
+        assert (
+            not build_result.issues.has_blocking_issues
+        ), f"Model build had blocking issues: {build_result.issues.summary()}"
 
     def test_semantic_validation(self, ch_model_dir):
         from metricflow.engine.utils import model_build_result_from_config
         from metricflow.model.model_validator import ModelValidator
 
         handler = _build_ch_handler_with_models(ch_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
         semantic_result = ModelValidator().validate_model(build_result.model)
-        assert not semantic_result.issues.has_blocking_issues, (
-            f"Semantic validation had blocking issues: {semantic_result.issues.summary()}"
-        )
+        assert (
+            not semantic_result.issues.has_blocking_issues
+        ), f"Semantic validation had blocking issues: {semantic_result.issues.summary()}"
 
     def test_data_warehouse_validation(self, ch_client, ch_model_dir, ch_sample_data):
         from metricflow.engine.utils import model_build_result_from_config
@@ -384,13 +376,9 @@ class TestClickHouseValidateConfigs:
         from metricflow.model.validations.validator_helpers import ModelValidationResults
 
         handler = _build_ch_handler_with_models(ch_model_dir)
-        build_result = model_build_result_from_config(
-            handler=handler, raise_issues_as_exceptions=False
-        )
+        build_result = model_build_result_from_config(handler=handler, raise_issues_as_exceptions=False)
         model = build_result.model
-        dw_validator = DataWarehouseModelValidator(
-            sql_client=ch_client, system_schema=CH_SCHEMA
-        )
+        dw_validator = DataWarehouseModelValidator(sql_client=ch_client, system_schema=CH_SCHEMA)
         results = []
         for validate_fn in [
             dw_validator.validate_data_sources,
@@ -401,9 +389,7 @@ class TestClickHouseValidateConfigs:
             result = validate_fn(model, None)
             results.append(result)
         merged = ModelValidationResults.merge(results)
-        assert not merged.has_blocking_issues, (
-            f"DW validation had blocking issues: {merged.summary()}"
-        )
+        assert not merged.has_blocking_issues, f"DW validation had blocking issues: {merged.summary()}"
 
 
 @pytest.mark.clickhouse

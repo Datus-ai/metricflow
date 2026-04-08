@@ -120,12 +120,16 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
                 sql_type = "DATETIME"
             else:
                 sql_type = "TEXT"
-            column_definitions.append(f"`{col_name}` {sql_type}")
+            escaped_col_name = col_name.replace("`", "``")
+            column_definitions.append(f"`{escaped_col_name}` {sql_type}")
 
         create_table_sql = f"CREATE TABLE {sql_table.sql} ({', '.join(column_definitions)})"
         self.execute(create_table_sql)
 
-        chunk_size = chunk_size or 1000
+        if chunk_size is None:
+            chunk_size = 1000
+        elif chunk_size <= 0:
+            raise ValueError("chunk_size must be a positive integer")
         for start_idx in range(0, len(df), chunk_size):
             end_idx = min(start_idx + chunk_size, len(df))
             chunk_df = df.iloc[start_idx:end_idx]
@@ -144,7 +148,8 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
                     elif isinstance(value, (int, float)):
                         values.append(str(value))
                     else:
-                        values.append(f"'{str(value)}'")
+                        escaped_value = str(value).replace("'", "''")
+                        values.append(f"'{escaped_value}'")
                 values_list.append(f"({', '.join(values)})")
 
             if values_list:
@@ -178,7 +183,8 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
         return list(df["TABLE_NAME"])
 
     def create_schema(self, schema_name: str) -> None:  # noqa: D
-        self.execute(f"CREATE DATABASE IF NOT EXISTS `{schema_name}`")
+        escaped_name = schema_name.replace("`", "``")
+        self.execute(f"CREATE DATABASE IF NOT EXISTS `{escaped_name}`")
 
     def cancel_submitted_queries(self) -> None:  # noqa: D
         for request_id in self.active_requests():

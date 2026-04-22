@@ -72,18 +72,18 @@ _telemetry_reporter.add_python_log_handler()
 
 @click.group()
 @click.option("-v", "--verbose", is_flag=True)
-@click.option("--namespace", help="Datus namespace to use for configuration")
+@click.option("--datasource", help="Datus datasource to use for configuration")
 @click.option("--config", help="Path to Datus agent configuration file")
 @pass_config
 @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
-def cli(cfg: CLIContext, verbose: bool, namespace: Optional[str], config: Optional[str]) -> None:  # noqa: D
+def cli(cfg: CLIContext, verbose: bool, datasource: Optional[str], config: Optional[str]) -> None:  # noqa: D
     cfg.verbose = verbose
 
-    # Set config path and namespace if provided
+    # Set config path and datasource if provided
     if config:
         cfg.set_config_path(config)
-    if namespace:
-        cfg.set_namespace(namespace)
+    if datasource:
+        cfg.set_datasource(datasource)
 
     # Cancel queries submitted to the DW if the user precess CTRL + c / process is terminated.
     # Note: docs unclear on the type for the 'frame' argument.
@@ -118,12 +118,12 @@ def version() -> None:
 @cli.command()
 @click.option("--restart", is_flag=True, help="Wipe the config file and start over")
 @click.option(
-    "--namespace",
-    help="Namespace from Datus config to use for setup",
+    "--datasource",
+    help="Datasource from Datus config to use for setup",
 )
 @pass_config
 @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
-def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
+def setup(cfg: CLIContext, restart: bool, datasource: Optional[str]) -> None:
     """Setup MetricFlow."""
 
     click.echo(
@@ -134,18 +134,18 @@ def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
         )
     )
 
-    # Handle --namespace option
-    if namespace:
+    # Handle --datasource option
+    if datasource:
         from metricflow.configuration.datus_config_handler import DatusConfigHandler
 
-        click.echo(f"📖 Validating configuration for namespace: {namespace}")
+        click.echo(f"📖 Validating configuration for datasource: {datasource}")
 
         try:
-            # Try to create DatusConfigHandler to validate namespace exists
-            config_handler = DatusConfigHandler(namespace=namespace)
+            # Try to create DatusConfigHandler to validate datasource exists
+            config_handler = DatusConfigHandler(datasource=datasource)
             db_type = config_handler.db_config.get("type", "unknown")
 
-            click.echo(f"✅ Found configuration for namespace '{namespace}'")
+            click.echo(f"✅ Found configuration for datasource '{datasource}'")
             click.echo(f"   Database type: {db_type}")
 
             # Create necessary directories
@@ -156,11 +156,11 @@ def setup(cfg: CLIContext, restart: bool, namespace: Optional[str]) -> None:
             semantic_models_dir.mkdir(exist_ok=True)
 
             click.echo("\n✅ Setup validation completed!")
-            click.echo("\n💡 Usage: Add --namespace to all mf commands")
+            click.echo("\n💡 Usage: Add --datasource to all mf commands")
             click.echo("\n   Examples:")
-            click.echo(f"     mf --namespace {namespace} list-metrics")
-            click.echo(f"     mf --namespace {namespace} query --metrics revenue --dimensions metric_time")
-            click.echo(f"     mf --namespace {namespace} health-checks")
+            click.echo(f"     mf --datasource {datasource} list-metrics")
+            click.echo(f"     mf --datasource {datasource} query --metrics revenue --dimensions metric_time")
+            click.echo(f"     mf --datasource {datasource} health-checks")
             click.echo("\n   Note: MetricFlow will read database config directly from Datus agent.yml")
             return
         except (FileNotFoundError, ValueError) as e:

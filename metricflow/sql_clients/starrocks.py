@@ -69,7 +69,7 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
             port=not_empty(parsed_url.port, "port", url),
             username=not_empty(parsed_url.username, "username", url),
             password=password,
-            database=not_empty(parsed_url.database, "database", url),
+            database=parsed_url.database or "",
             query=parsed_url.query,
         )
 

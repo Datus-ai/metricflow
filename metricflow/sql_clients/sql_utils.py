@@ -130,27 +130,36 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
         username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
         password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
-        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
+        database = handler.get_value(CONFIG_DWH_DB) or ""
 
-        clickhouse_url = f"clickhouse://{username}@{host}:{port}/{database}"
+        if database:
+            clickhouse_url = f"clickhouse://{username}@{host}:{port}/{database}"
+        else:
+            clickhouse_url = f"clickhouse://{username}@{host}:{port}"
         return ClickHouseSqlClient.from_connection_details(clickhouse_url, password)
     elif dialect == SqlDialect.STARROCKS.value:
         host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
         port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
         username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
         password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
-        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
+        database = handler.get_value(CONFIG_DWH_DB) or ""
 
-        starrocks_url = f"starrocks://{username}@{host}:{port}/{database}"
+        if database:
+            starrocks_url = f"starrocks://{username}@{host}:{port}/{database}"
+        else:
+            starrocks_url = f"starrocks://{username}@{host}:{port}"
         return StarRocksSqlClient.from_connection_details(starrocks_url, password)
     elif dialect == SqlDialect.TRINO.value:
         host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
         port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
         username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
         password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
-        database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
+        database = handler.get_value(CONFIG_DWH_DB) or ""
 
-        trino_url = f"trino://{username}@{host}:{port}/{database}"
+        if database:
+            trino_url = f"trino://{username}@{host}:{port}/{database}"
+        else:
+            trino_url = f"trino://{username}@{host}:{port}"
         return TrinoSqlClient.from_connection_details(trino_url, password)
     elif dialect == SqlDialect.SQLITE.value:
         database = not_empty(handler.get_value(CONFIG_DWH_DB), CONFIG_DWH_DB, url)

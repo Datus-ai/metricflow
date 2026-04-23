@@ -25,12 +25,12 @@ from metricflow.configuration.yaml_handler import YamlFileHandler
 class DatusConfigHandler(YamlFileHandler):
     """Config handler that reads from Datus agent.yml configuration."""
 
-    def __init__(self, namespace: str, config_path: Optional[str] = None) -> None:
-        """Initialize DatusConfigHandler with namespace and optional config path."""
-        self.namespace = namespace
+    def __init__(self, datasource: str, config_path: Optional[str] = None) -> None:
+        """Initialize DatusConfigHandler with datasource and optional config path."""
+        self.datasource = datasource
         self.config_path = config_path
         self.datus_config = self._load_datus_config()
-        self.db_config = self._get_namespace_db_config()
+        self.db_config = self._get_datasource_db_config()
 
         # Call parent with a dummy path since we don't use it
         super().__init__(yaml_file_path=self._get_dummy_config_path())
@@ -78,17 +78,17 @@ class DatusConfigHandler(YamlFileHandler):
 
         return config
 
-    def _get_namespace_db_config(self) -> Dict[str, Any]:
-        """Get database configuration for the specified namespace."""
-        namespaces = self.datus_config.get("agent", {}).get("namespace", {})
+    def _get_datasource_db_config(self) -> Dict[str, Any]:
+        """Get database configuration for the specified datasource."""
+        datasources = self.datus_config.get("agent", {}).get("services", {}).get("datasources", {})
 
-        if self.namespace not in namespaces:
-            available = ", ".join(namespaces.keys())
+        if self.datasource not in datasources:
+            available = ", ".join(datasources.keys())
             raise ValueError(
-                f"Namespace '{self.namespace}' not found in Datus config. " f"Available namespaces: {available}"
+                f"Datasource '{self.datasource}' not found in Datus config. " f"Available datasources: {available}"
             )
 
-        return namespaces[self.namespace]
+        return datasources[self.datasource]
 
     def _resolve_env_vars(self, value: Any) -> str:
         """Resolve ${VAR} or $VAR style environment variables in config values."""
@@ -109,10 +109,10 @@ class DatusConfigHandler(YamlFileHandler):
         return value_str
 
     def _get_model_path_from_datus_config(self) -> str:
-        """Get semantic models path for the namespace.
+        """Get semantic models path for the datasource.
 
         Returns:
-            Path: {datus_home}/semantic_models/{namespace}
+            Path: {datus_home}/semantic_models/{datasource}
 
         The datus_home is determined from agent.home config.
         If not configured, defaults to ~/.datus
@@ -124,8 +124,8 @@ class DatusConfigHandler(YamlFileHandler):
         else:
             datus_home = pathlib.Path.home() / ".datus"
 
-        # Construct semantic models path: {datus_home}/semantic_models/{namespace}
-        model_path = datus_home / "semantic_models" / self.namespace
+        # Construct semantic models path: {datus_home}/semantic_models/{datasource}
+        model_path = datus_home / "semantic_models" / self.datasource
 
         return str(model_path)
 

@@ -54,13 +54,11 @@ class TrinoSqlExpressionRenderer(DefaultSqlExpressionRenderer):
 
         if node.percentile_args.function_type is SqlPercentileFunctionType.CONTINUOUS:
             raise RuntimeError(
-                "Trino does not support exact continuous percentile aggregation. "
-                "Use approximate_continuous instead."
+                "Trino does not support exact continuous percentile aggregation. " "Use approximate_continuous instead."
             )
         elif node.percentile_args.function_type is SqlPercentileFunctionType.DISCRETE:
             raise RuntimeError(
-                "Trino does not support exact discrete percentile aggregation. "
-                "Use approximate_discrete instead."
+                "Trino does not support exact discrete percentile aggregation. " "Use approximate_discrete instead."
             )
         elif node.percentile_args.function_type is SqlPercentileFunctionType.APPROXIMATE_CONTINUOUS:
             sql = f"approx_percentile({arg_rendered.sql}, {percentile})"

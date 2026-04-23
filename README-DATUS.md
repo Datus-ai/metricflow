@@ -21,8 +21,8 @@ mf tutorial
 
 #### Option 2: Setup from Datus Config (Recommended for Datus users)
 ```bash
-# Validate your Datus namespace configuration
-mf setup --namespace your_namespace
+# Validate your Datus datasource configuration
+mf setup --datasource your_datasource
 ```
 
 #### Option 3: Traditional Setup
@@ -33,17 +33,17 @@ mf setup
 
 ## Using MetricFlow with Datus
 
-### With Namespace (reads from Datus agent.yml)
+### With Datasource (reads from Datus agent.yml)
 ```bash
-# All commands support --namespace flag
-mf --namespace starrocks list-metrics
-mf --namespace starrocks query --metrics revenue --dimensions metric_time
-mf --namespace starrocks health-checks
+# All commands support --datasource flag
+mf --datasource starrocks list-metrics
+mf --datasource starrocks query --metrics revenue --dimensions metric_time
+mf --datasource starrocks health-checks
 ```
 
 ### Traditional Mode (reads from ~/.metricflow/config.yml)
 ```bash
-# Use without --namespace flag
+# Use without --datasource flag
 mf list-metrics
 mf query --metrics revenue --dimensions metric_time
 mf health-checks
@@ -51,27 +51,30 @@ mf health-checks
 
 ## Commands
 
-- `mf setup [--namespace NAMESPACE]` - Setup and validate configuration
+- `mf setup [--datasource DATASOURCE]` - Setup and validate configuration
 - `mf tutorial` - Create demo database and sample models
-- `mf --namespace <NAME> <command>` - Use specific Datus namespace
+- `mf --datasource <NAME> <command>` - Use specific Datus datasource
 - `mcp-metricflow serve` - Start MetricFlow MCP server
 
 ## Configuration
 
-### Namespace Mode (No config file needed!)
-When using `--namespace`, MetricFlow reads directly from `~/.datus/conf/agent.yml`:
+### Datasource Mode (No config file needed!)
+When using `--datasource`, MetricFlow reads directly from `~/.datus/conf/agent.yml`:
 
 ```yaml
 agent:
-  namespace:
-    starrocks:
-      type: mysql
-      host: localhost
-      port: 9030
-      username: admin
-      password: ${DB_PASSWORD}
-      database: my_db
-      schema: analytics
+  services:
+    datasources:
+      benchmark:
+        type: starrocks
+        host: 127.0.0.1
+        port: '9030'
+        username: datus
+        password: '123456'
+        catalog: default_catalog
+        charset: utf8mb4
+        autocommit: 'True'
+        timeout_seconds: 30
 ```
 
 ### Traditional Mode
@@ -87,8 +90,8 @@ model_path: ~/.metricflow/semantic_models
 ## Integration with Datus Agent
 
 ```bash
-# Start Datus Agent with namespace
-datus-cli --namespace starrocks
+# Start Datus Agent with datasource
+datus-cli --datasource starrocks
 
 # Ask questions (in Datus CLI)
 Datus> /which state has the highest total asset value of failure bank?
@@ -124,7 +127,7 @@ For detailed MCP server documentation, see [MCP-SERVER.md](MCP-SERVER.md).
 ┌─────────────────────────────────────────────────────────┐
 │                    mf CLI                                │
 ├─────────────────────────────────────────────────────────┤
-│  With --namespace    │  Without --namespace              │
+│  With --datasource   │  Without --datasource             │
 ├──────────────────────┼───────────────────────────────────┤
 │ DatusConfigHandler   │  ConfigHandler                    │
 │       ↓              │       ↓                            │
@@ -138,8 +141,8 @@ For detailed MCP server documentation, see [MCP-SERVER.md](MCP-SERVER.md).
 ### Key Features
 
 - ✅ **No environment variables** - Direct config file reading
-- ✅ **Dual mode support** - Namespace or traditional config
-- ✅ **Single command** - Just `mf` with optional `--namespace`
+- ✅ **Dual mode support** - Datasource or traditional config
+- ✅ **Single command** - Just `mf` with optional `--datasource`
 - ✅ **Lazy initialization** - Config loaded on-demand
 - ✅ **Environment variable resolution** - Supports `${VAR}` in Datus config
 

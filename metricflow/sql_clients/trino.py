@@ -68,7 +68,7 @@ class TrinoSqlClient(SqlAlchemySqlClient):
             port=not_empty(parsed_url.port, "port", url),
             username=not_empty(parsed_url.username, "username", url),
             password=password,
-            catalog=not_empty(parsed_url.database, "catalog", url),
+            catalog=parsed_url.database or "",
         )
 
     def __init__(  # noqa: D

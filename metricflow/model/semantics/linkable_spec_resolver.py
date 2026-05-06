@@ -529,6 +529,9 @@ class ValidLinkableSpecResolver:
         local_linkable_elements = self._get_local_set(measure_data_source)
         join_paths = []
 
+        if self._max_identifier_links == 0:
+            return local_linkable_elements
+
         # Create 1-hop elements
         for identifier in measure_data_source.identifiers:
             data_sources = self._get_data_sources_with_joinable_identifier(

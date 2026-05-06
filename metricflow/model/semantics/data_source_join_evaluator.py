@@ -9,7 +9,7 @@ from metricflow.object_utils import pformat_big_objects
 from metricflow.protocols.semantics import DataSourceSemanticsAccessor
 from metricflow.references import IdentifierReference
 
-MAX_JOIN_HOPS = 2  # Legacy default; callers should prefer passing an explicit value.
+DEFAULT_MAX_JOIN_HOPS = 5
 
 
 @dataclass(frozen=True)
@@ -111,10 +111,14 @@ class DataSourceJoinEvaluator:
         Args:
             left_data_source_reference: The starting data source.
             include_multi_hop: If True, explore paths beyond 1 hop.
-            max_join_hops: Maximum hops to explore. Defaults to MAX_JOIN_HOPS when include_multi_hop is True.
+            max_join_hops: Maximum hops to explore. Defaults to DEFAULT_MAX_JOIN_HOPS when include_multi_hop is True.
         """
         if max_join_hops is None:
-            max_join_hops = MAX_JOIN_HOPS if include_multi_hop else 1
+            max_join_hops = DEFAULT_MAX_JOIN_HOPS if include_multi_hop else 1
+        elif max_join_hops < 1:
+            raise ValueError(f"max_join_hops must be >= 1. Got: {max_join_hops}")
+        elif not include_multi_hop and max_join_hops > 1:
+            raise ValueError("max_join_hops > 1 requires include_multi_hop=True.")
         data_source_joins: Dict[str, DataSourceLink] = {}
         self._get_remaining_hops_of_joinable_data_sources(
             left_data_source_reference=left_data_source_reference,
@@ -132,6 +136,7 @@ class DataSourceJoinEvaluator:
         join_hops_remaining: int,
     ) -> None:
         assert join_hops_remaining > 0, "No join hops remaining. This is unexpected with proper use of this method."
+        join_paths_to_visit_next: List[List[DataSourceIdentifierJoin]] = []
         for parent_data_source_reference, parent_join_path in parent_data_source_to_join_paths.items():
             parent_data_source = self._data_source_semantics.get_by_reference(
                 data_source_reference=parent_data_source_reference
@@ -140,7 +145,6 @@ class DataSourceJoinEvaluator:
 
             # We'll get all joinable data sources in this hop before recursing to ensure we find the most
             # efficient path to each data source.
-            join_paths_to_visit_next: List[List[DataSourceIdentifierJoin]] = []
             for identifier in parent_data_source.identifiers:
                 identifier_reference = IdentifierReference(element_name=identifier.name)
                 identifier_data_sources = self._data_source_semantics.get_data_sources_for_identifier(
@@ -179,6 +183,8 @@ class DataSourceJoinEvaluator:
 
         join_hops_remaining -= 1
         if not join_hops_remaining:
+            return
+        if not join_paths_to_visit_next:
             return
 
         right_data_sources_to_join_paths: Dict[DataSourceReference, List[DataSourceIdentifierJoin]] = {}

@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence
+from typing import Sequence, Tuple
 
 import pytest
 
@@ -11,7 +11,12 @@ from metricflow.dataflow.builder.node_evaluator import (
     JoinLinkableInstancesRecipe,
 )
 from metricflow.dataflow.builder.partitions import PartitionTimeDimensionJoinDescription
-from metricflow.dataflow.dataflow_plan import BaseOutput, ValidityWindowJoinDescription
+from metricflow.dataflow.dataflow_plan import (
+    BaseOutput,
+    JoinToBaseOutputNode,
+    ReadSqlSourceNode,
+    ValidityWindowJoinDescription,
+)
 from metricflow.dataset.dataset import DataSet
 from metricflow.model.semantic_model import SemanticModel
 from metricflow.dataset.data_source_adapter import DataSourceDataSet
@@ -30,6 +35,22 @@ from metricflow.time.time_granularity import TimeGranularity
 from metricflow.test.fixtures.model_fixtures import ConsistentIdObjectRepository
 
 logger = logging.getLogger(__name__)
+
+
+def _read_source_names_in_join_tree(node: BaseOutput[DataSourceDataSet]) -> Tuple[str, ...]:
+    if isinstance(node, ReadSqlSourceNode):
+        return (node.data_set.data_source_reference.data_source_name,)
+
+    if isinstance(node, JoinToBaseOutputNode):
+        source_names = list(_read_source_names_in_join_tree(node.left_node))
+        for join_target in node.join_targets:
+            source_names.extend(_read_source_names_in_join_tree(join_target.join_node))
+        return tuple(source_names)
+
+    if hasattr(node, "parent_node"):
+        return _read_source_names_in_join_tree(node.parent_node)
+
+    raise AssertionError(f"Unexpected node type in join tree: {node.__class__.__name__}")
 
 
 @pytest.fixture
@@ -481,6 +502,11 @@ def test_node_evaluator_with_three_hop_joined_spec(  # noqa: D
     )
     assert len(evaluation.join_recipes) == 1
     assert evaluation.join_recipes[0].join_on_identifier == LinklessIdentifierSpec.from_element_name("account_id")
+    assert _read_source_names_in_join_tree(evaluation.join_recipes[0].node_to_join) == (
+        "bridge_table",
+        "customer_other_data",
+        "third_hop_table",
+    )
 
 
 def test_node_evaluator_with_five_hop_joined_spec(  # noqa: D
@@ -530,6 +556,13 @@ def test_node_evaluator_with_five_hop_joined_spec(  # noqa: D
     )
     assert len(evaluation.join_recipes) == 1
     assert evaluation.join_recipes[0].join_on_identifier == LinklessIdentifierSpec.from_element_name("account_id")
+    assert _read_source_names_in_join_tree(evaluation.join_recipes[0].node_to_join) == (
+        "bridge_table",
+        "customer_other_data",
+        "third_hop_table",
+        "fourth_hop_table",
+        "fifth_hop_table",
+    )
 
 
 def test_node_evaluator_with_partition_joined_spec(  # noqa: D

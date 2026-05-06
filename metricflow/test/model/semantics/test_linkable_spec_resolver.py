@@ -11,7 +11,7 @@ from metricflow.model.semantics.linkable_spec_resolver import (
     ValidLinkableSpecResolver,
 )
 from metricflow.model.semantics.linkable_element_properties import LinkableElementProperties
-from metricflow.model.semantics.data_source_join_evaluator import MAX_JOIN_HOPS
+from metricflow.model.semantics.data_source_join_evaluator import DEFAULT_MAX_JOIN_HOPS
 from metricflow.references import MetricReference
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def simple_model_spec_resolver(simple_semantic_model: SemanticModel) -> ValidLin
     return ValidLinkableSpecResolver(
         user_configured_model=simple_semantic_model.user_configured_model,
         data_source_semantics=simple_semantic_model.data_source_semantics,
-        max_identifier_links=MAX_JOIN_HOPS,
+        max_identifier_links=2,
     )
 
 
@@ -174,7 +174,7 @@ def test_multi_hop_property(multi_hop_join_semantic_model: SemanticModel) -> Non
     multi_hop_spec_resolver = ValidLinkableSpecResolver(
         user_configured_model=multi_hop_join_semantic_model.user_configured_model,
         data_source_semantics=multi_hop_join_semantic_model.data_source_semantics,
-        max_identifier_links=MAX_JOIN_HOPS,
+        max_identifier_links=2,
     )
     property_check_helper(
         spec_resolver=multi_hop_spec_resolver,
@@ -209,6 +209,7 @@ def test_three_hop_property(multi_hop_join_semantic_model: SemanticModel) -> Non
 
     three_hop_names = sorted(x.qualified_name for x in result if len(x.identifier_links) == 3)
     assert "account_id__customer_id__customer_third_hop_id__value" in three_hop_names
+    assert all(len(x.identifier_links) <= 3 for x in result)
 
 
 def test_five_hop_property(multi_hop_join_semantic_model: SemanticModel) -> None:  # noqa: D
@@ -228,6 +229,7 @@ def test_five_hop_property(multi_hop_join_semantic_model: SemanticModel) -> None
     assert (
         "account_id__customer_id__customer_third_hop_id__fourth_hop_id__fifth_hop_id__fifth_hop_value" in five_hop_names
     )
+    assert all(len(x.identifier_links) <= 5 for x in result)
 
 
 def test_metric_semantics_default_supports_five_hop(multi_hop_join_semantic_model: SemanticModel) -> None:
@@ -241,6 +243,29 @@ def test_metric_semantics_default_supports_five_hop(multi_hop_join_semantic_mode
     assert "account_id__customer_id__customer_third_hop_id__fourth_hop_id__fifth_hop_id__fifth_hop_value" in {
         x.qualified_name for x in result
     }
+    assert all(len(x.identifier_links) <= DEFAULT_MAX_JOIN_HOPS for x in result)
+
+
+def test_zero_hop_resolver_returns_no_joined_specs(simple_semantic_model: SemanticModel) -> None:  # noqa: D
+    zero_hop_spec_resolver = ValidLinkableSpecResolver(
+        user_configured_model=simple_semantic_model.user_configured_model,
+        data_source_semantics=simple_semantic_model.data_source_semantics,
+        max_identifier_links=0,
+    )
+
+    joined_specs = zero_hop_spec_resolver.get_linkable_elements_for_metrics(
+        metric_references=[MetricReference(element_name="bookings")],
+        with_any_of=frozenset({LinkableElementProperties.JOINED}),
+        without_any_of=frozenset(),
+    ).as_spec_set.as_tuple
+    multi_hop_specs = zero_hop_spec_resolver.get_linkable_elements_for_metrics(
+        metric_references=[MetricReference(element_name="bookings")],
+        with_any_of=frozenset({LinkableElementProperties.MULTI_HOP}),
+        without_any_of=frozenset(),
+    ).as_spec_set.as_tuple
+
+    assert joined_specs == ()
+    assert multi_hop_specs == ()
 
 
 def test_multi_scd_paths_are_not_linkable() -> None:

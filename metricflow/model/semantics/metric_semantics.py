@@ -5,6 +5,7 @@ from typing import Dict, List, FrozenSet, Set, Tuple, Sequence
 from metricflow.errors.errors import MetricNotFoundError, DuplicateMetricError, NonExistentMeasureError
 from metricflow.model.objects.metric import Metric, MetricType
 from metricflow.model.objects.user_configured_model import UserConfiguredModel
+from metricflow.model.semantics.data_source_join_evaluator import DEFAULT_MAX_JOIN_HOPS
 from metricflow.model.semantics.data_source_semantics import DataSourceSemantics
 from metricflow.model.semantics.linkable_spec_resolver import ValidLinkableSpecResolver
 from metricflow.model.semantics.linkable_element_properties import LinkableElementProperties
@@ -13,8 +14,6 @@ from metricflow.references import MetricReference
 from metricflow.specs import MetricSpec, LinkableInstanceSpec, MetricInputMeasureSpec, MeasureSpec
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_MAX_JOIN_HOPS = 5
 
 
 class MetricSemantics:  # noqa: D
@@ -32,7 +31,7 @@ class MetricSemantics:  # noqa: D
             self.add_metric(metric)
 
         # Eager path expansion can grow combinatorially in connected models, so keep the default bounded.
-        max_identifier_links = min(DEFAULT_MAX_JOIN_HOPS, len(self._user_configured_model.data_sources))
+        max_identifier_links = min(DEFAULT_MAX_JOIN_HOPS, max(0, len(self._user_configured_model.data_sources) - 1))
 
         self._linkable_spec_resolver = ValidLinkableSpecResolver(
             user_configured_model=self._user_configured_model,

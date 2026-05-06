@@ -11,7 +11,10 @@ from metricflow.model.semantics.linkable_element_properties import LinkableEleme
 from metricflow.model.spec_converters import WhereConstraintConverter
 from metricflow.references import MetricReference
 from metricflow.specs import MetricSpec, LinkableInstanceSpec, MetricInputMeasureSpec, MeasureSpec
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_MAX_JOIN_HOPS = 5
 
 
 class MetricSemantics:  # noqa: D
@@ -28,9 +31,8 @@ class MetricSemantics:  # noqa: D
         for metric in self._user_configured_model.metrics:
             self.add_metric(metric)
 
-        # The maximum number of identifier links is bounded by the number of data sources in the model,
-        # since join paths cannot revisit a data source. This allows N-hop joins without an artificial limit.
-        max_identifier_links = len(self._user_configured_model.data_sources)
+        # Eager path expansion can grow combinatorially in connected models, so keep the default bounded.
+        max_identifier_links = min(DEFAULT_MAX_JOIN_HOPS, len(self._user_configured_model.data_sources))
 
         self._linkable_spec_resolver = ValidLinkableSpecResolver(
             user_configured_model=self._user_configured_model,

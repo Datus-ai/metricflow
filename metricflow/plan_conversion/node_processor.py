@@ -154,6 +154,28 @@ class PreDimensionJoinNodeProcessor(Generic[SqlDataSetT]):
 
         return False
 
+    def _nodes_contain_multiple_validity_windows(self, nodes: Sequence[BaseOutput[SqlDataSetT]]) -> bool:
+        """Return true if the nodes include more than one source with validity-window dimensions."""
+
+        data_sources_with_validity_windows: Set[str] = set()
+        for node in nodes:
+            instance_set = self._node_data_set_resolver.get_output_data_set(node).instance_set
+            data_source_element_instances = (
+                instance_set.measure_instances
+                + instance_set.dimension_instances
+                + instance_set.time_dimension_instances
+                + instance_set.identifier_instances
+            )
+            for instance in data_source_element_instances:
+                for defined_from in instance.defined_from:
+                    data_source = self._data_source_semantics.get_by_reference(defined_from.data_source_reference)
+                    if data_source and data_source.has_validity_dimensions:
+                        data_sources_with_validity_windows.add(data_source.name)
+                        if len(data_sources_with_validity_windows) > 1:
+                            return True
+
+        return False
+
     def _get_candidates_nodes_for_multi_hop(
         self,
         desired_linkable_spec: LinkableInstanceSpec,
@@ -180,11 +202,13 @@ class PreDimensionJoinNodeProcessor(Generic[SqlDataSetT]):
 
         # Step 0: Find initial leaf nodes containing the last identifier and target element.
         # Each candidate is (node, source_nodes_used, join_identifiers_used).
-        current_candidates: List[Tuple[
-            BaseOutput[SqlDataSetT],
-            Tuple[BaseOutput[SqlDataSetT], ...],
-            Tuple[LinklessIdentifierSpec, ...],
-        ]] = []
+        current_candidates: List[
+            Tuple[
+                BaseOutput[SqlDataSetT],
+                Tuple[BaseOutput[SqlDataSetT], ...],
+                Tuple[LinklessIdentifierSpec, ...],
+            ]
+        ] = []
 
         for node in nodes:
             if not self._node_contains_identifier(node=node, identifier_reference=last_link_ref):
@@ -204,11 +228,13 @@ class PreDimensionJoinNodeProcessor(Generic[SqlDataSetT]):
             join_link_ref = desired_linkable_spec.identifier_links[step + 1]
             join_link_spec = LinklessIdentifierSpec.from_reference(join_link_ref)
 
-            next_candidates: List[Tuple[
-                BaseOutput[SqlDataSetT],
-                Tuple[BaseOutput[SqlDataSetT], ...],
-                Tuple[LinklessIdentifierSpec, ...],
-            ]] = []
+            next_candidates: List[
+                Tuple[
+                    BaseOutput[SqlDataSetT],
+                    Tuple[BaseOutput[SqlDataSetT], ...],
+                    Tuple[LinklessIdentifierSpec, ...],
+                ]
+            ] = []
 
             for bridge_node in nodes:
                 # Bridge node must have both the current link and the next link.
@@ -223,6 +249,10 @@ class PreDimensionJoinNodeProcessor(Generic[SqlDataSetT]):
                     if bridge_node.node_id == right_node.node_id or any(
                         bridge_node.node_id == used.node_id for used in used_source_nodes
                     ):
+                        continue
+
+                    source_nodes_in_chain = (bridge_node,) + used_source_nodes
+                    if self._nodes_contain_multiple_validity_windows(source_nodes_in_chain):
                         continue
 
                     data_set_of_bridge = self._node_data_set_resolver.get_output_data_set(bridge_node)
@@ -265,11 +295,13 @@ class PreDimensionJoinNodeProcessor(Generic[SqlDataSetT]):
                         ],
                     )
 
-                    next_candidates.append((
-                        composite,
-                        (bridge_node,) + used_source_nodes,
-                        (join_link_spec,) + join_identifiers,
-                    ))
+                    next_candidates.append(
+                        (
+                            composite,
+                            source_nodes_in_chain,
+                            (join_link_spec,) + join_identifiers,
+                        )
+                    )
 
             current_candidates = next_candidates
 

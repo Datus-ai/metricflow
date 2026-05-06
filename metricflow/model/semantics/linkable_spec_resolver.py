@@ -372,6 +372,20 @@ class DataSourceJoinPath:
         return self.path_elements[-1].data_source
 
 
+def _path_has_multiple_validity_windows(
+    measure_data_source: DataSource, path_elements: Sequence[DataSourceJoinPathElement]
+) -> bool:
+    """Return true if this join path would include more than one validity window."""
+
+    validity_window_count = int(measure_data_source.has_validity_dimensions)
+    for path_element in path_elements:
+        if path_element.data_source.has_validity_dimensions:
+            validity_window_count += 1
+            if validity_window_count > 1:
+                return True
+    return False
+
+
 class ValidLinkableSpecResolver:
     """Figures out what linkable specs are valid for a given metric.
 
@@ -524,13 +538,16 @@ class ValidLinkableSpecResolver:
             for data_source in data_sources:
                 if data_source.name == measure_data_source.name:
                     continue
+                path_elements = (
+                    DataSourceJoinPathElement(
+                        data_source=data_source, join_on_identifier=identifier.reference.element_name
+                    ),
+                )
+                if _path_has_multiple_validity_windows(measure_data_source, path_elements):
+                    continue
                 join_paths.append(
                     DataSourceJoinPath(
-                        path_elements=(
-                            DataSourceJoinPathElement(
-                                data_source=data_source, join_on_identifier=identifier.reference.element_name
-                            ),
-                        )
+                        path_elements=path_elements,
                     )
                 )
         all_linkable_elements = LinkableElementSet.merge(
@@ -611,10 +628,13 @@ class ValidLinkableSpecResolver:
                 ):
                     continue
 
-                new_join_path = DataSourceJoinPath(
-                    path_elements=current_join_path.path_elements
-                    + (DataSourceJoinPathElement(data_source=data_source, join_on_identifier=identifier_name),)
+                new_path_elements = current_join_path.path_elements + (
+                    DataSourceJoinPathElement(data_source=data_source, join_on_identifier=identifier_name),
                 )
+                if _path_has_multiple_validity_windows(measure_data_source, new_path_elements):
+                    continue
+
+                new_join_path = DataSourceJoinPath(path_elements=new_path_elements)
                 new_join_paths.append(new_join_path)
 
         return new_join_paths

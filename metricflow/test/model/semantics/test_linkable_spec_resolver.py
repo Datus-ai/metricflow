@@ -1,9 +1,12 @@
 import logging
+import textwrap
 from typing import Sequence
 
 import pytest
 
 from metricflow.model.semantic_model import SemanticModel
+from metricflow.model.objects.common import YamlConfigFile
+from metricflow.model.parsing.dir_to_model import parse_yaml_files_to_validation_ready_model
 from metricflow.model.semantics.linkable_spec_resolver import (
     ValidLinkableSpecResolver,
 )
@@ -204,9 +207,7 @@ def test_three_hop_property(multi_hop_join_semantic_model: SemanticModel) -> Non
         without_any_of=frozenset(),
     ).as_spec_set.as_tuple
 
-    three_hop_names = sorted(
-        x.qualified_name for x in result if len(x.identifier_links) == 3
-    )
+    three_hop_names = sorted(x.qualified_name for x in result if len(x.identifier_links) == 3)
     assert "account_id__customer_id__customer_third_hop_id__value" in three_hop_names
 
 
@@ -223,10 +224,133 @@ def test_five_hop_property(multi_hop_join_semantic_model: SemanticModel) -> None
         without_any_of=frozenset(),
     ).as_spec_set.as_tuple
 
-    five_hop_names = sorted(
-        x.qualified_name for x in result if len(x.identifier_links) == 5
+    five_hop_names = sorted(x.qualified_name for x in result if len(x.identifier_links) == 5)
+    assert (
+        "account_id__customer_id__customer_third_hop_id__fourth_hop_id__fifth_hop_id__fifth_hop_value" in five_hop_names
     )
-    assert "account_id__customer_id__customer_third_hop_id__fourth_hop_id__fifth_hop_id__fifth_hop_value" in five_hop_names
+
+
+def test_metric_semantics_default_supports_five_hop(multi_hop_join_semantic_model: SemanticModel) -> None:
+    """Tests that MetricSemantics' bounded default still supports the intended N-hop use case."""
+
+    result = multi_hop_join_semantic_model.metric_semantics.element_specs_for_metrics(
+        metric_references=[MetricReference(element_name="txn_count")],
+        with_any_property=frozenset({LinkableElementProperties.MULTI_HOP}),
+    )
+
+    assert "account_id__customer_id__customer_third_hop_id__fourth_hop_id__fifth_hop_id__fifth_hop_value" in {
+        x.qualified_name for x in result
+    }
+
+
+def test_multi_scd_paths_are_not_linkable() -> None:
+    """Tests that a deep path with two validity-window data sources is not advertised as queryable."""
+
+    yaml_contents = textwrap.dedent(
+        """\
+        data_source:
+          name: fact_source
+          sql_table: some_schema.fact_source
+          measures:
+            - name: fact_count
+              expr: "1"
+              agg: sum
+          dimensions:
+            - name: ds
+              type: time
+              type_params:
+                is_primary: true
+                time_granularity: day
+          identifiers:
+            - name: acct
+              type: foreign
+        ---
+        data_source:
+          name: scd_a
+          sql_table: some_schema.scd_a
+          dimensions:
+            - name: scd_a_value
+              type: categorical
+            - name: window_start
+              type: time
+              type_params:
+                time_granularity: day
+                validity_params:
+                  is_start: true
+            - name: window_end
+              type: time
+              type_params:
+                time_granularity: day
+                validity_params:
+                  is_end: true
+          identifiers:
+            - name: acct
+              type: natural
+            - name: bridge_key
+              type: foreign
+        ---
+        data_source:
+          name: bridge_source
+          sql_table: some_schema.bridge_source
+          dimensions:
+            - name: bridge_value
+              type: categorical
+          identifiers:
+            - name: bridge_key
+              type: primary
+            - name: scd_key
+              type: foreign
+        ---
+        data_source:
+          name: scd_c
+          sql_table: some_schema.scd_c
+          dimensions:
+            - name: scd_c_value
+              type: categorical
+            - name: window_start
+              type: time
+              type_params:
+                time_granularity: day
+                validity_params:
+                  is_start: true
+            - name: window_end
+              type: time
+              type_params:
+                time_granularity: day
+                validity_params:
+                  is_end: true
+          identifiers:
+            - name: scd_key
+              type: natural
+        ---
+        metric:
+          name: fact_count
+          type: measure_proxy
+          type_params:
+            measures:
+              - fact_count
+        """
+    )
+    semantic_model = SemanticModel(
+        parse_yaml_files_to_validation_ready_model(
+            [YamlConfigFile(filepath="multi_scd_path_model.yaml", contents=yaml_contents)]
+        ).model
+    )
+    spec_resolver = ValidLinkableSpecResolver(
+        user_configured_model=semantic_model.user_configured_model,
+        data_source_semantics=semantic_model.data_source_semantics,
+        max_identifier_links=3,
+    )
+
+    result = spec_resolver.get_linkable_elements_for_metrics(
+        metric_references=[MetricReference(element_name="fact_count")],
+        with_any_of=LinkableElementProperties.all_properties(),
+        without_any_of=frozenset(),
+    ).as_spec_set
+    dimension_names = {x.qualified_name for x in result.dimension_specs}
+
+    assert "acct__bridge_key__bridge_value" in dimension_names
+    assert "acct__bridge_key__scd_key__scd_c_value" not in dimension_names
 
 
 def test_derived_time_granularity_property(simple_model_spec_resolver: ValidLinkableSpecResolver) -> None:  # noqa: D

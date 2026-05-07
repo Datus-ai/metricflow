@@ -417,19 +417,53 @@ def create_bridge_table(mf_test_session_state: MetricFlowTestSessionState, sql_c
     )
 
     third_hop_table = [
-        # ["customer_third_hop_id", "value"]
-        ("another_id0", "citadel"),
-        ("another_id1", "virtu"),
-        ("another_id2", "two sigma"),
-        ("another_id3", "jump"),
+        # ["customer_third_hop_id", "value", "fourth_hop_id"]
+        ("another_id0", "citadel", "fhid0"),
+        ("another_id1", "virtu", "fhid1"),
+        ("another_id2", "two sigma", "fhid2"),
+        ("another_id3", "jump", "fhid3"),
     ]
     create_table(
         sql_client=sql_client,
         sql_table=SqlTable(schema_name=schema, table_name="third_hop_table"),
         df=make_df(
             sql_client=sql_client,
-            columns=["customer_third_hop_id", "value"],
+            columns=["customer_third_hop_id", "value", "fourth_hop_id"],
             data=third_hop_table,
+        ),
+    )
+
+    fourth_hop_table = [
+        # ["fourth_hop_id", "fourth_hop_value", "fifth_hop_id"]
+        ("fhid0", "alpha", "5hid0"),
+        ("fhid1", "beta", "5hid1"),
+        ("fhid2", "gamma", "5hid2"),
+        ("fhid3", "delta", "5hid3"),
+    ]
+    create_table(
+        sql_client=sql_client,
+        sql_table=SqlTable(schema_name=schema, table_name="fourth_hop_table"),
+        df=make_df(
+            sql_client=sql_client,
+            columns=["fourth_hop_id", "fourth_hop_value", "fifth_hop_id"],
+            data=fourth_hop_table,
+        ),
+    )
+
+    fifth_hop_table = [
+        # ["fifth_hop_id", "fifth_hop_value"]
+        ("5hid0", "echo"),
+        ("5hid1", "foxtrot"),
+        ("5hid2", "golf"),
+        ("5hid3", "hotel"),
+    ]
+    create_table(
+        sql_client=sql_client,
+        sql_table=SqlTable(schema_name=schema, table_name="fifth_hop_table"),
+        df=make_df(
+            sql_client=sql_client,
+            columns=["fifth_hop_id", "fifth_hop_value"],
+            data=fifth_hop_table,
         ),
     )
 

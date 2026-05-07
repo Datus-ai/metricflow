@@ -1,5 +1,7 @@
 from typing import Dict, Sequence
 
+import pytest
+
 from metricflow.instances import DataSourceReference
 from metricflow.model.objects.elements.identifier import IdentifierType
 from metricflow.model.semantic_model import SemanticModel
@@ -301,7 +303,7 @@ def test_get_joinable_data_sources_multi_hop(multi_hop_join_semantic_model: Sema
 
     # 2-hop
     joinable_data_sources = join_evaluator.get_joinable_data_sources(
-        left_data_source_reference=data_source_reference, include_multi_hop=True
+        left_data_source_reference=data_source_reference, include_multi_hop=True, max_join_hops=2
     )
     assert set(joinable_data_sources.keys()) == {"bridge_table", "customer_other_data", "customer_table"}
     assert joinable_data_sources["bridge_table"] == DataSourceLink(
@@ -354,6 +356,41 @@ def test_get_joinable_data_sources_multi_hop(multi_hop_join_semantic_model: Sema
             ),
         ],
     )
+
+
+def test_get_joinable_data_sources_validates_hop_parameters(
+    multi_hop_join_semantic_model: SemanticModel,
+) -> None:  # noqa: D
+    data_source_reference = DataSourceReference(data_source_name="account_month_txns")
+    join_evaluator = DataSourceJoinEvaluator(data_source_semantics=multi_hop_join_semantic_model.data_source_semantics)
+
+    with pytest.raises(ValueError, match="max_join_hops must be >= 1"):
+        join_evaluator.get_joinable_data_sources(
+            left_data_source_reference=data_source_reference,
+            include_multi_hop=True,
+            max_join_hops=0,
+        )
+
+    with pytest.raises(ValueError, match="requires include_multi_hop=True"):
+        join_evaluator.get_joinable_data_sources(
+            left_data_source_reference=data_source_reference,
+            max_join_hops=2,
+        )
+
+
+def test_get_joinable_data_sources_default_multi_hop_limit(
+    multi_hop_join_semantic_model: SemanticModel,
+) -> None:  # noqa: D
+    data_source_reference = DataSourceReference(data_source_name="account_month_txns")
+    join_evaluator = DataSourceJoinEvaluator(data_source_semantics=multi_hop_join_semantic_model.data_source_semantics)
+
+    joinable_data_sources = join_evaluator.get_joinable_data_sources(
+        left_data_source_reference=data_source_reference,
+        include_multi_hop=True,
+    )
+
+    assert "fifth_hop_table" in joinable_data_sources
+    assert len(joinable_data_sources["fifth_hop_table"].join_path) == 5
 
 
 def test_natural_identifier_data_source_validation(scd_semantic_model: SemanticModel) -> None:

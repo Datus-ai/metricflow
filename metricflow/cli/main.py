@@ -74,14 +74,19 @@ _telemetry_reporter.add_python_log_handler()
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("--datasource", help="Datus datasource to use for configuration")
 @click.option("--config", help="Path to Datus agent configuration file")
+@click.option("--project-root", help="Datus project root directory (default: current directory)")
 @pass_config
 @log_call(module_name=__name__, telemetry_reporter=_telemetry_reporter)
-def cli(cfg: CLIContext, verbose: bool, datasource: Optional[str], config: Optional[str]) -> None:  # noqa: D
+def cli(
+    cfg: CLIContext, verbose: bool, datasource: Optional[str], config: Optional[str], project_root: Optional[str]
+) -> None:  # noqa: D
     cfg.verbose = verbose
 
     # Set config path and datasource if provided
     if config:
         cfg.set_config_path(config)
+    if project_root:
+        cfg.set_project_root(project_root)
     if datasource:
         cfg.set_datasource(datasource)
 

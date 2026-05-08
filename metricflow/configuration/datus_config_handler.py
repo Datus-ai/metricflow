@@ -25,10 +25,11 @@ from metricflow.configuration.yaml_handler import YamlFileHandler
 class DatusConfigHandler(YamlFileHandler):
     """Config handler that reads from Datus agent.yml configuration."""
 
-    def __init__(self, datasource: str, config_path: Optional[str] = None) -> None:
+    def __init__(self, datasource: str, config_path: Optional[str] = None, project_root: Optional[str] = None) -> None:
         """Initialize DatusConfigHandler with datasource and optional config path."""
         self.datasource = datasource
         self.config_path = config_path
+        self.project_root = project_root
         self.datus_config = self._load_datus_config()
         self.db_config = self._get_datasource_db_config()
 
@@ -112,20 +113,18 @@ class DatusConfigHandler(YamlFileHandler):
         """Get semantic models path for the datasource.
 
         Returns:
-            Path: {datus_home}/semantic_models/{datasource}
+            Path: {project_root}/subject/semantic_models/{datasource}
 
-        The datus_home is determined from agent.home config.
-        If not configured, defaults to ~/.datus
+        The project_root is determined by (in priority order):
+        1. Explicit project_root parameter
+        2. Current working directory
         """
-        # Get datus home from agent.home config
-        agent_home = self.datus_config.get("agent", {}).get("home", "")
-        if agent_home:
-            datus_home = pathlib.Path(agent_home).expanduser().resolve()
+        if self.project_root:
+            root = pathlib.Path(self.project_root).expanduser().resolve()
         else:
-            datus_home = pathlib.Path.home() / ".datus"
+            root = pathlib.Path.cwd()
 
-        # Construct semantic models path: {datus_home}/semantic_models/{datasource}
-        model_path = datus_home / "semantic_models" / self.datasource
+        model_path = root / "subject" / "semantic_models" / self.datasource
 
         return str(model_path)
 

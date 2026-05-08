@@ -49,6 +49,7 @@ class CLIContext:
         self._config_handler: Optional[YamlFileHandler] = None
         self._datasource: Optional[str] = None
         self._config_path: Optional[str] = None
+        self._project_root: Optional[str] = None
         self._configure_logging()
 
     def set_config_path(self, config_path: str) -> None:
@@ -57,6 +58,14 @@ class CLIContext:
         This must be called before accessing any config-dependent properties.
         """
         self._config_path = config_path
+        self._config_handler = None  # Reset to force recreation
+
+    def set_project_root(self, project_root: str) -> None:
+        """Set the Datus project root directory.
+
+        This must be called before accessing any config-dependent properties.
+        """
+        self._project_root = project_root
         self._config_handler = None  # Reset to force recreation
 
     def set_datasource(self, datasource: str) -> None:
@@ -76,7 +85,9 @@ class CLIContext:
         """
         if self._config_handler is None:
             if self._datasource:
-                self._config_handler = DatusConfigHandler(datasource=self._datasource, config_path=self._config_path)
+                self._config_handler = DatusConfigHandler(
+                    datasource=self._datasource, config_path=self._config_path, project_root=self._project_root
+                )
             else:
                 self._config_handler = ConfigHandler()
         return self._config_handler

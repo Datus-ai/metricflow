@@ -1,4 +1,5 @@
 from typing import Any, List, Optional, Set
+from urllib.parse import quote_plus
 
 import dateutil.parser
 import pandas as pd
@@ -9,6 +10,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_DIALECT,
     CONFIG_DWH_HOST,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_SSLMODE,
     CONFIG_DWH_USER,
     CONFIG_DWH_PASSWORD,
 )
@@ -88,6 +90,14 @@ def make_sql_client(url: str, password: str) -> AsyncSqlClient:
         )
 
 
+def _sslmode_query_suffix(handler: YamlFileHandler) -> str:
+    sslmode = handler.get_value(CONFIG_DWH_SSLMODE)
+    sslmode = str(sslmode).strip() if sslmode else ""
+    if not sslmode:
+        return ""
+    return f"?sslmode={quote_plus(sslmode)}"
+
+
 def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
     """Construct a SqlClient given a yaml file config."""
 
@@ -114,7 +124,7 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         password = not_empty(handler.get_value(CONFIG_DWH_PASSWORD), "password", url)
         database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
 
-        postgres_url = f"postgresql://{username}@{host}:{port}/{database}"
+        postgres_url = f"postgresql://{username}@{host}:{port}/{database}{_sslmode_query_suffix(handler)}"
         return PostgresSqlClient.from_connection_details(postgres_url, password)
     elif dialect == SqlDialect.GREENPLUM.value:
         host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
@@ -123,7 +133,7 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         password = not_empty(handler.get_value(CONFIG_DWH_PASSWORD), "password", url)
         database = not_empty(handler.get_value(CONFIG_DWH_DB), "database", url)
 
-        greenplum_url = f"greenplum://{username}@{host}:{port}/{database}"
+        greenplum_url = f"greenplum://{username}@{host}:{port}/{database}{_sslmode_query_suffix(handler)}"
         return GreenplumSqlClient.from_connection_details(greenplum_url, password)
     elif dialect == SqlDialect.CLICKHOUSE.value:
         host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)

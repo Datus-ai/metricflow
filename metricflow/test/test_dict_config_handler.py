@@ -9,10 +9,12 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_PORT,
     CONFIG_DWH_PROJECT_ID,
     CONFIG_DWH_SCHEMA,
+    CONFIG_DWH_SSLMODE,
     CONFIG_DWH_USER,
     CONFIG_DWH_WAREHOUSE,
     CONFIG_MODEL_PATH,
 )
+from metricflow.configuration.datus_config_handler import DatusConfigHandler
 from metricflow.configuration.dict_config_handler import (
     DictConfigHandler,
     build_config_dict_from_db_params,
@@ -59,9 +61,11 @@ class TestBuildConfigDictFromDbParams:
             username="pguser",
             password="pgpw",
             database="pgdb",
+            sslmode="disable",
         )
         assert result[CONFIG_DWH_DIALECT] == "postgresql"
         assert result[CONFIG_DWH_SCHEMA] == "public"
+        assert result[CONFIG_DWH_SSLMODE] == "disable"
 
     def test_postgres_alias(self):
         result = build_config_dict_from_db_params(db_type="postgres")
@@ -200,3 +204,32 @@ class TestDictConfigHandler:
         assert handler.get_value(CONFIG_DWH_DB) == "testdb"
         assert handler.get_value(CONFIG_DWH_SCHEMA) == "default"
         assert handler.get_value(CONFIG_MODEL_PATH) == "/models"
+
+
+class TestDatusConfigHandler:
+    def test_get_value_returns_sslmode_from_datasource_config(self, tmp_path):
+        config_path = tmp_path / "agent.yml"
+        config_path.write_text(
+            """
+agent:
+  services:
+    datasources:
+      greenplum:
+        type: greenplum
+        host: gp-master
+        port: 5432
+        username: gpadmin
+        password: secret
+        database: testdb
+        sslmode: disable
+""",
+            encoding="utf-8",
+        )
+
+        handler = DatusConfigHandler(
+            datasource="greenplum",
+            config_path=str(config_path),
+            project_root=str(tmp_path),
+        )
+
+        assert handler.get_value(CONFIG_DWH_SSLMODE) == "disable"

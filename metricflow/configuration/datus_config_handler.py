@@ -18,6 +18,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_PROJECT_ID,
     CONFIG_MODEL_PATH,
     CONFIG_EMAIL,
+    CONFIG_DWH_SSLMODE,
 )
 from metricflow.configuration.yaml_handler import YamlFileHandler
 
@@ -171,6 +172,9 @@ class DatusConfigHandler(YamlFileHandler):
 
         if key == CONFIG_DWH_PASSWORD:
             return self._resolve_env_vars(self.db_config.get("password", ""))
+
+        if key == CONFIG_DWH_SSLMODE:
+            return self._resolve_env_vars(self.db_config.get("sslmode", ""))
 
         if key == CONFIG_DWH_DB:
             # Special handling for file-based databases

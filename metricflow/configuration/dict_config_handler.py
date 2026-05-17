@@ -11,13 +11,13 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_PORT,
     CONFIG_DWH_PROJECT_ID,
     CONFIG_DWH_SCHEMA,
+    CONFIG_DWH_SSLMODE,
     CONFIG_DWH_USER,
     CONFIG_DWH_WAREHOUSE,
     CONFIG_EMAIL,
     CONFIG_MODEL_PATH,
 )
 from metricflow.configuration.yaml_handler import YamlFileHandler
-
 
 # Mapping from Datus DB types to MetricFlow dialect names
 DIALECT_MAPPING = {
@@ -58,6 +58,7 @@ def build_config_dict_from_db_params(
     account: str = "",
     project_id: str = "",
     model_path: str = "",
+    sslmode: str = "",
 ) -> Dict[str, str]:
     """Build a MetricFlow config dict from database connection parameters.
 
@@ -77,6 +78,7 @@ def build_config_dict_from_db_params(
     result[CONFIG_DWH_PORT] = port
     result[CONFIG_DWH_USER] = username
     result[CONFIG_DWH_PASSWORD] = password
+    result[CONFIG_DWH_SSLMODE] = sslmode
 
     # Database — file-based DBs use uri
     if db_type_lower in ("sqlite", "duckdb") and uri:

@@ -36,7 +36,6 @@ from metricflow.sql_clients.common_client import SqlDialect
 from metricflow.sql_clients.greenplum import GreenplumEngineAttributes, GreenplumSqlClient
 from metricflow.sql_clients.sql_utils import make_sql_client_from_config
 
-
 # ---------------------------------------------------------------------------
 # Config layer tests (no database needed)
 # ---------------------------------------------------------------------------
@@ -61,6 +60,7 @@ class TestGreenplumDictConfigHandler:
             username="gpadmin",
             password="secret",
             database="testdb",
+            sslmode="disable",
         )
         assert config[CONFIG_DWH_DIALECT] == "greenplum"
         assert config[CONFIG_DWH_HOST] == "gp-master"
@@ -90,6 +90,7 @@ class TestGreenplumDictConfigHandler:
             username="gpadmin",
             password="secret",
             database="testdb",
+            sslmode="disable",
         )
         handler = DictConfigHandler(config_dict)
         assert handler.get_value(CONFIG_DWH_DIALECT) == "greenplum"
@@ -109,6 +110,7 @@ class TestGreenplumClientFromConfig:
             username="gpadmin",
             password="secret",
             database="testdb",
+            sslmode="disable",
         )
         handler = DictConfigHandler(config_dict)
 
@@ -123,6 +125,7 @@ class TestGreenplumClientFromConfig:
             assert "gp-master" in url
             assert "5432" in url
             assert "testdb" in url
+            assert "sslmode=disable" in url
             assert password == "secret"
 
 
@@ -215,7 +218,7 @@ class TestGreenplumCliSetupDialect:
 # Uses Docker environment from datus-greenplum: localhost:15432, gpadmin/pivotal
 # ---------------------------------------------------------------------------
 
-GP_URL = "greenplum://gpadmin@localhost:15432/test"
+GP_URL = "greenplum://gpadmin@localhost:15432/test?sslmode=disable"
 GP_PASSWORD = "pivotal"
 
 
@@ -371,6 +374,7 @@ def _build_gp_handler_with_models(model_dir: str) -> DictConfigHandler:
         database="test",
         schema=GP_SCHEMA,
         model_path=model_dir,
+        sslmode="disable",
     )
     return DictConfigHandler(config_dict)
 

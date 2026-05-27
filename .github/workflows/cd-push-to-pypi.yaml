@@ -26,6 +26,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: false
           token: ${{ secrets.RELEASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
@@ -209,6 +210,7 @@ jobs:
           if [ -n "${PYPI_USERNAME:-}" ]; then
             username="${PYPI_USERNAME}"
           elif [ -n "${PYPI_PASSWORD:-}" ]; then
+            # Legacy compatibility with the previous Poetry publish workflow.
             username="transform_data"
           else
             username="__token__"

@@ -1,27 +1,245 @@
-name: Publish Metricflow Release
+name: Publish MetricFlow Release
+
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "*"
+    inputs:
+      version:
+        description: "Release version. Use auto to publish the latest PyPI version + 0.0.1 without downgrading main."
+        required: false
+        default: "auto"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-datus-metricflow-release
+  cancel-in-progress: false
 
 jobs:
-  poetry-publish:
+  publish:
     runs-on: ubuntu-latest
     environment: Pypi Publish
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+      - name: Checkout latest main
+        uses: actions/checkout@v4
         with:
-          python-version: "3.9"
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+          token: ${{ secrets.RELEASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
 
-      - name: Install Poetry
-        run: pip install poetry
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Install dependencies
-        run: make install
+      - name: Install release tooling
+        run: pip install packaging poetry twine
 
-      - name: Poetry Publish
-        run: poetry build && poetry publish -u transform_data -p ${{ secrets.PYPI_PASSWORD }}
+      - name: Resolve release version
+        id: resolve
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+          PACKAGE_NAME: datus-metricflow
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          from packaging.version import Version
+
+          package_name = os.environ["PACKAGE_NAME"]
+          requested_version = os.environ.get("REQUESTED_VERSION", "").strip()
+          pyproject_path = Path("pyproject.toml")
+
+
+          def pypi_json(path: str) -> dict | None:
+              url = f"https://pypi.org/pypi/{path}/json"
+              try:
+                  with urllib.request.urlopen(url, timeout=20) as response:
+                      return json.loads(response.read().decode("utf-8"))
+              except urllib.error.HTTPError as exc:
+                  if exc.code == 404:
+                      return None
+                  raise
+
+
+          def latest_pypi_version(package: str) -> Version | None:
+              payload = pypi_json(package)
+              if payload is None:
+                  return None
+              return Version(payload["info"]["version"])
+
+
+          def pypi_version_exists(package: str, version: Version) -> bool:
+              return pypi_json(f"{package}/{version}") is not None
+
+
+          def bump_patch(version: Version) -> Version:
+              release = list(version.release)
+              while len(release) < 3:
+                  release.append(0)
+              release[2] += 1
+              return Version(".".join(str(part) for part in release[:3]))
+
+
+          def current_poetry_version(path: Path) -> Version:
+              in_poetry = False
+              for line in path.read_text(encoding="utf-8").splitlines():
+                  stripped = line.strip()
+                  if stripped == "[tool.poetry]":
+                      in_poetry = True
+                      continue
+                  if in_poetry and stripped.startswith("[") and stripped.endswith("]"):
+                      break
+                  if in_poetry and line.startswith("version = "):
+                      match = re.fullmatch(r'version = "([^"]+)"', line)
+                      if not match:
+                          raise ValueError(f"Unsupported version line: {line}")
+                      return Version(match.group(1))
+              raise ValueError("Unable to find [tool.poetry] version in pyproject.toml")
+
+
+          def update_poetry_version(path: Path, version: Version) -> None:
+              lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+              in_poetry = False
+              for index, line in enumerate(lines):
+                  stripped = line.strip()
+                  if stripped == "[tool.poetry]":
+                      in_poetry = True
+                      continue
+                  if in_poetry and stripped.startswith("[") and stripped.endswith("]"):
+                      break
+                  if in_poetry and line.startswith("version = "):
+                      lines[index] = f'version = "{version}"\n'
+                      path.write_text("".join(lines), encoding="utf-8")
+                      return
+              raise ValueError("Unable to update [tool.poetry] version in pyproject.toml")
+
+
+          current_version = current_poetry_version(pyproject_path)
+          latest_version = latest_pypi_version(package_name)
+
+          if requested_version and requested_version.lower() != "auto":
+              target_version = Version(requested_version)
+              if str(target_version) != requested_version:
+                  raise ValueError(f"Use canonical PEP 440 version {target_version} instead of {requested_version!r}")
+          else:
+              default_base = latest_version or current_version
+              target_version = max(bump_patch(default_base), current_version)
+
+          if target_version < current_version:
+              raise ValueError(
+                  f"Refusing to downgrade {package_name}: pyproject has {current_version}, requested {target_version}"
+              )
+          if pypi_version_exists(package_name, target_version):
+              raise ValueError(f"{package_name} {target_version} already exists on PyPI")
+
+          update_poetry_version(pyproject_path, target_version)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              print(f"version={target_version}", file=output)
+              print(f"tag={package_name}-v{target_version}", file=output)
+
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              print(f"### {package_name} release", file=summary)
+              print(f"- Current main version: `{current_version}`", file=summary)
+              print(f"- Latest PyPI version: `{latest_version or '<none>'}`", file=summary)
+              print(f"- Release version: `{target_version}`", file=summary)
+          PY
+
+      - name: Validate and build package
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          poetry check
+          poetry build
+          python -m twine check dist/*
+
+      - name: Commit version and tag release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN || secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          git diff --check
+          git add pyproject.toml
+          if git diff --cached --quiet; then
+            echo "pyproject.toml already declares ${VERSION}"
+          else
+            git commit -m "chore: release datus-metricflow ${VERSION}"
+          fi
+
+          git fetch --tags origin
+          if git rev-parse --verify --quiet "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists" >&2
+            exit 1
+          fi
+
+          git tag -a "${TAG}" -m "Release datus-metricflow ${VERSION}"
+          git push --atomic origin HEAD:main "refs/tags/${TAG}"
+
+      - name: Publish to PyPI
+        env:
+          PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
+          PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          password="${PYPI_PASSWORD:-${PYPI_API_TOKEN:-${PYPI_TOKEN:-}}}"
+          if [ -z "${password}" ]; then
+            echo "Missing PyPI password/token secret" >&2
+            exit 1
+          fi
+
+          if [ -n "${PYPI_USERNAME:-}" ]; then
+            username="${PYPI_USERNAME}"
+          elif [ -n "${PYPI_PASSWORD:-}" ]; then
+            # Legacy compatibility with the previous Poetry publish workflow.
+            username="transform_data"
+          else
+            username="__token__"
+          fi
+
+          python -m twine upload --non-interactive --username "${username}" --password "${password}" dist/*
+
+      - name: Verify PyPI release
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import os
+          import time
+          import urllib.request
+
+          version = os.environ["VERSION"]
+          url = f"https://pypi.org/pypi/datus-metricflow/{version}/json"
+          for attempt in range(12):
+              try:
+                  with urllib.request.urlopen(url, timeout=20) as response:
+                      response.read()
+                  print(f"Verified datus-metricflow {version} on PyPI")
+                  break
+              except Exception as exc:
+                  if attempt == 11:
+                      raise
+                  print(f"PyPI verification attempt {attempt + 1} failed: {exc}")
+                  time.sleep(10)
+          PY

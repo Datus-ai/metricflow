@@ -5,7 +5,7 @@ integration_test:
   model: SIMPLE_MODEL
   metrics: ["booking_value"]
   group_bys: ["metric_time"]
-  order_bys: ["-booking_value"]
+  order_bys: ["-booking_value", "metric_time"]
   check_order: true
   check_query: |
     SELECT
@@ -16,6 +16,7 @@ integration_test:
       ds
     ORDER BY
       booking_value DESC
+      , metric_time
 ---
 integration_test:
   name: order_asc
@@ -23,7 +24,7 @@ integration_test:
   model: SIMPLE_MODEL
   metrics: ["booking_value"]
   group_bys: ["metric_time"]
-  order_bys: ["booking_value"]
+  order_bys: ["booking_value", "metric_time"]
   check_order: true
   check_query: |
     SELECT
@@ -34,6 +35,7 @@ integration_test:
       ds
     ORDER BY
       booking_value
+      , metric_time
 ---
 integration_test:
   name: order_limit
@@ -41,7 +43,7 @@ integration_test:
   model: SIMPLE_MODEL
   metrics: ["booking_value"]
   group_bys: ["metric_time"]
-  order_bys: ["booking_value"]
+  order_bys: ["booking_value", "metric_time"]
   limit: 2
   check_order: true
   check_query: |
@@ -53,6 +55,7 @@ integration_test:
       ds
     ORDER BY
       booking_value
+      , metric_time
     LIMIT 2
 ---
 integration_test:

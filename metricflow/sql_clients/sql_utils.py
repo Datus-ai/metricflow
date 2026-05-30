@@ -3,16 +3,21 @@ from urllib.parse import quote_plus
 
 import dateutil.parser
 import pandas as pd
-from sqlalchemy.engine import make_url
+from sqlalchemy.engine import URL, make_url
 
 from metricflow.configuration.constants import (
+    CONFIG_DWH_ACCOUNT,
     CONFIG_DWH_DB,
     CONFIG_DWH_DIALECT,
     CONFIG_DWH_HOST,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY_FILE,
+    CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
+    CONFIG_DWH_ROLE,
     CONFIG_DWH_SSLMODE,
     CONFIG_DWH_USER,
     CONFIG_DWH_PASSWORD,
+    CONFIG_DWH_WAREHOUSE,
 )
 from metricflow.configuration.yaml_handler import YamlFileHandler
 from metricflow.protocols.async_sql_client import AsyncSqlClient
@@ -27,6 +32,7 @@ from metricflow.sql_clients.greenplum import GreenplumSqlClient
 from metricflow.sql_clients.mysql import MySQLSqlClient
 from metricflow.sql_clients.postgres import PostgresSqlClient
 from metricflow.sql_clients.sqlite import SqliteSqlClient
+from metricflow.sql_clients.snowflake import SnowflakeSqlClient
 from metricflow.sql_clients.starrocks import StarRocksSqlClient
 from metricflow.sql_clients.trino import TrinoSqlClient
 
@@ -84,9 +90,12 @@ def make_sql_client(url: str, password: str) -> AsyncSqlClient:
         return TrinoSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.SQLITE:
         return SqliteSqlClient.from_connection_details(url, password)
+    elif dialect == SqlDialect.SNOWFLAKE:
+        return SnowflakeSqlClient.from_connection_details(url, password)
     else:
         raise ValueError(
-            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, and SQLite dialects are supported in this build. Got: `{dialect}` in URL {url}"
+            "Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, SQLite, and Snowflake "
+            f"dialects are supported in this build. Got: `{dialect}` in URL {url}"
         )
 
 
@@ -96,6 +105,26 @@ def _sslmode_query_suffix(handler: YamlFileHandler) -> str:
     if not sslmode:
         return ""
     return f"?sslmode={quote_plus(sslmode)}"
+
+
+def _snowflake_url_from_config(handler: YamlFileHandler) -> str:
+    """Build a Snowflake SQLAlchemy URL from MetricFlow config values."""
+    config_url = handler.url
+    account = handler.get_value(CONFIG_DWH_ACCOUNT) or handler.get_value(CONFIG_DWH_HOST)
+    query = {
+        "warehouse": not_empty(handler.get_value(CONFIG_DWH_WAREHOUSE), "warehouse", config_url),
+    }
+    role = handler.get_value(CONFIG_DWH_ROLE)
+    if role:
+        query["role"] = role
+    url = URL.create(
+        drivername=SqlDialect.SNOWFLAKE.value,
+        username=not_empty(handler.get_value(CONFIG_DWH_USER), "username", config_url),
+        host=not_empty(account, "account", config_url),
+        database=not_empty(handler.get_value(CONFIG_DWH_DB), "database", config_url),
+        query=query,
+    )
+    return url.render_as_string(hide_password=False)
 
 
 def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
@@ -174,9 +203,21 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
     elif dialect == SqlDialect.SQLITE.value:
         database = not_empty(handler.get_value(CONFIG_DWH_DB), CONFIG_DWH_DB, url)
         return SqliteSqlClient(file_path=database)
+    elif dialect == SqlDialect.SNOWFLAKE.value:
+        password = handler.get_value(CONFIG_DWH_PASSWORD) or None
+        private_key_file = handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE) or None
+        private_key_file_pwd = handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE_PWD) or None
+        snowflake_url = _snowflake_url_from_config(handler)
+        return SnowflakeSqlClient.from_connection_details(
+            snowflake_url,
+            password,
+            private_key_file=private_key_file,
+            private_key_file_pwd=private_key_file_pwd,
+        )
     else:
         raise ValueError(
-            f"Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, and SQLite dialects are supported in this build. Got dialect '{dialect}' in {url}"
+            "Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, SQLite, and Snowflake "
+            f"dialects are supported in this build. Got dialect '{dialect}' in {url}"
         )
 
 

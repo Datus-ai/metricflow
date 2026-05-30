@@ -11,10 +11,13 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY_FILE,
+    CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_SCHEMA,
     CONFIG_DWH_USER,
     CONFIG_DWH_WAREHOUSE,
     CONFIG_DWH_ACCOUNT,
+    CONFIG_DWH_ROLE,
     CONFIG_DWH_PROJECT_ID,
     CONFIG_MODEL_PATH,
     CONFIG_EMAIL,
@@ -216,6 +219,15 @@ class DatusConfigHandler(YamlFileHandler):
 
         if key == CONFIG_DWH_ACCOUNT:
             return self._resolve_env_vars(self.db_config.get("account", ""))
+
+        if key == CONFIG_DWH_ROLE:
+            return self._resolve_env_vars(self.db_config.get("role", ""))
+
+        if key == CONFIG_DWH_PRIVATE_KEY_FILE:
+            return self._resolve_env_vars(self.db_config.get("private_key_file", ""))
+
+        if key == CONFIG_DWH_PRIVATE_KEY_FILE_PWD:
+            return self._resolve_env_vars(self.db_config.get("private_key_file_pwd", ""))
 
         # BigQuery-specific
         if key == CONFIG_DWH_PROJECT_ID:

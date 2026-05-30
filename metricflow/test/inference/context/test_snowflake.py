@@ -47,6 +47,17 @@ def test_column_type_conversion() -> None:  # noqa: D
     assert ctx_provider._column_type_from_show_columns_data_type("TIME") == InferenceColumnType.UNKNOWN
 
 
+def test_column_statistics_query_uses_column_references() -> None:
+    ctx_provider = SnowflakeInferenceContextProvider(client=MagicMock(), tables=[])
+
+    assert ctx_provider._get_select_list_for_column_name("revenue", count_nulls=True) == (
+        "COUNT(DISTINCT revenue) AS revenue_countdistinct, "
+        "MIN(revenue) AS revenue_min, "
+        "MAX(revenue) AS revenue_max, "
+        "SUM(CASE WHEN revenue IS NULL THEN 1 ELSE 0 END) AS revenue_countnull"
+    )
+
+
 def test_context_provider() -> None:
     """Test `SnowflakeInferenceContextProvider` implementation.
 

@@ -155,5 +155,29 @@ For detailed MCP server documentation, see [MCP-SERVER.md](MCP-SERVER.md).
 | MySQL | ✅ Full | Network database |
 | StarRocks | ✅ Full | Uses MySQL protocol |
 | PostgreSQL | ⚠️ Config only | Client not in this build |
-| Snowflake | ⚠️ Config only | Client not in this build |
+| Snowflake | ✅ Full | Password or RSA key pair auth; requires Snowflake dependencies |
 | BigQuery | ⚠️ Config only | Client not in this build |
+
+### Snowflake Authentication
+
+Snowflake accepts either password authentication or RSA key pair authentication. For MFA-enforced users and CI/service
+accounts, configure `private_key_file` instead of `password` in the Datus datasource:
+
+```yaml
+agent:
+  services:
+    datasources:
+      snowflake:
+        type: snowflake
+        account: myaccount
+        username: myuser
+        private_key_file: /path/to/rsa_key.p8
+        private_key_file_pwd: optional-key-passphrase
+        warehouse: my_warehouse
+        role: analyst_role
+        database: my_database
+        schema: my_schema
+```
+
+Exactly one of `password` or `private_key_file` must be provided. `role` is optional and is passed through the
+Snowflake SQLAlchemy URL.

@@ -9,7 +9,10 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY_FILE,
+    CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_PROJECT_ID,
+    CONFIG_DWH_ROLE,
     CONFIG_DWH_SCHEMA,
     CONFIG_DWH_SSLMODE,
     CONFIG_DWH_USER,
@@ -56,6 +59,9 @@ def build_config_dict_from_db_params(
     uri: str = "",
     warehouse: str = "",
     account: str = "",
+    role: str = "",
+    private_key_file: str = "",
+    private_key_file_pwd: str = "",
     project_id: str = "",
     model_path: str = "",
     sslmode: str = "",
@@ -107,6 +113,9 @@ def build_config_dict_from_db_params(
     # Snowflake-specific
     result[CONFIG_DWH_WAREHOUSE] = warehouse
     result[CONFIG_DWH_ACCOUNT] = account
+    result[CONFIG_DWH_ROLE] = role
+    result[CONFIG_DWH_PRIVATE_KEY_FILE] = private_key_file
+    result[CONFIG_DWH_PRIVATE_KEY_FILE_PWD] = private_key_file_pwd
 
     # BigQuery-specific
     result[CONFIG_DWH_PROJECT_ID] = project_id

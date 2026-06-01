@@ -51,10 +51,21 @@ def test_column_statistics_query_uses_column_references() -> None:
     ctx_provider = SnowflakeInferenceContextProvider(client=MagicMock(), tables=[])
 
     assert ctx_provider._get_select_list_for_column_name("revenue", count_nulls=True) == (
-        "COUNT(DISTINCT revenue) AS revenue_countdistinct, "
-        "MIN(revenue) AS revenue_min, "
-        "MAX(revenue) AS revenue_max, "
-        "SUM(CASE WHEN revenue IS NULL THEN 1 ELSE 0 END) AS revenue_countnull"
+        'COUNT(DISTINCT "revenue") AS "revenue_countdistinct", '
+        'MIN("revenue") AS "revenue_min", '
+        'MAX("revenue") AS "revenue_max", '
+        'SUM(CASE WHEN "revenue" IS NULL THEN 1 ELSE 0 END) AS "revenue_countnull"'
+    )
+
+
+def test_column_statistics_query_quotes_identifiers_and_aliases() -> None:
+    ctx_provider = SnowflakeInferenceContextProvider(client=MagicMock(), tables=[])
+
+    assert ctx_provider._get_select_list_for_column_name('select"value', count_nulls=False) == (
+        'COUNT(DISTINCT "select""value") AS "select""value_countdistinct", '
+        'MIN("select""value") AS "select""value_min", '
+        'MAX("select""value") AS "select""value_max", '
+        '0 AS "select""value_countnull"'
     )
 
 
@@ -104,6 +115,10 @@ def test_context_provider() -> None:
     )
 
     ctx = ctx_provider.get_context()
+    statistics_query = client.query.call_args_list[1].args[0]
+
+    assert 'COUNT(DISTINCT "INTCOL") AS "intcol_countdistinct"' in statistics_query
+    assert 'SUM(CASE WHEN "STRCOL" IS NULL THEN 1 ELSE 0 END) AS "strcol_countnull"' in statistics_query
 
     assert ctx == DataWarehouseInferenceContext(
         [

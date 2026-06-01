@@ -136,6 +136,27 @@ class TestBuildConfigDictFromDbParams:
         assert result[CONFIG_DWH_PROJECT_ID] == "my-project-123"
         assert result[CONFIG_DWH_SCHEMA] == "bq_schema"
 
+    def test_positional_arguments_preserve_existing_order(self):
+        result = build_config_dict_from_db_params(
+            "bigquery",
+            "",
+            "",
+            "",
+            "",
+            "bq_dataset",
+            "bq_schema",
+            "",
+            "",
+            "",
+            "my-project-123",
+            "/path/to/models",
+            "disable",
+        )
+
+        assert result[CONFIG_DWH_PROJECT_ID] == "my-project-123"
+        assert result[CONFIG_MODEL_PATH] == "/path/to/models"
+        assert result[CONFIG_DWH_SSLMODE] == "disable"
+
     def test_model_path(self):
         result = build_config_dict_from_db_params(
             db_type="mysql",
@@ -243,7 +264,10 @@ agent:
 
         assert handler.get_value(CONFIG_DWH_SSLMODE) == "disable"
 
-    def test_get_value_returns_snowflake_key_pair_fields(self, tmp_path):
+    def test_get_value_returns_snowflake_key_pair_fields(self, tmp_path, monkeypatch):
+        key_file = tmp_path / "rsa_key.p8"
+        monkeypatch.setenv("SNOWFLAKE_KEY_FILE", str(key_file))
+
         config_path = tmp_path / "agent.yml"
         config_path.write_text(
             """
@@ -270,5 +294,5 @@ agent:
         )
 
         assert handler.get_value(CONFIG_DWH_ROLE) == "analyst"
-        assert handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE) == "${SNOWFLAKE_KEY_FILE}"
+        assert handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE) == str(key_file)
         assert handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE_PWD) == "1234"

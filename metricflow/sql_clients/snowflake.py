@@ -119,8 +119,12 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
                 f"Only {SnowflakeSqlClient.KEY_PAIR_AUTHENTICATOR} is supported for key pair authentication."
             )
         private_key_file = SnowflakeSqlClient._single_query_param(query_dict, "private_key_file", url)
-        private_key_file_pwd = SnowflakeSqlClient._single_query_param(query_dict, "private_key_file_pwd", url)
-        return private_key_file, private_key_file_pwd
+        if "private_key_file_pwd" in query_dict:
+            raise ValueError(
+                "Snowflake private_key_file_pwd must be supplied via the explicit argument/config path "
+                "and must not be included in the connection URL."
+            )
+        return private_key_file, None
 
     @staticmethod
     def _validate_credentials(

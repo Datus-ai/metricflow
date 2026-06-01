@@ -59,12 +59,12 @@ def build_config_dict_from_db_params(
     uri: str = "",
     warehouse: str = "",
     account: str = "",
-    role: str = "",
-    private_key_file: str = "",
-    private_key_file_pwd: str = "",
     project_id: str = "",
     model_path: str = "",
     sslmode: str = "",
+    role: str = "",
+    private_key_file: str = "",
+    private_key_file_pwd: str = "",
 ) -> Dict[str, str]:
     """Build a MetricFlow config dict from database connection parameters.
 

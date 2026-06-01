@@ -56,16 +56,30 @@ class SnowflakeInferenceContextProvider(DataWarehouseInferenceContextProvider):
 
         return InferenceColumnType.UNKNOWN
 
-    def _get_select_list_for_column_name(self, name: str, count_nulls: bool) -> str:
+    @staticmethod
+    def _quote_identifier(identifier: str) -> str:
+        escaped_identifier = identifier.replace('"', '""')
+        return f'"{escaped_identifier}"'
+
+    def _get_select_list_for_column_name(self, name: str, count_nulls: bool, alias_prefix: str = "") -> str:
+        column_reference = self._quote_identifier(name)
+        alias_prefix = alias_prefix or name
+        count_distinct_alias = self._quote_identifier(
+            f"{alias_prefix}_{SnowflakeInferenceContextProvider.COUNT_DISTINCT_SUFFIX}"
+        )
+        min_alias = self._quote_identifier(f"{alias_prefix}_{SnowflakeInferenceContextProvider.MIN_SUFFIX}")
+        max_alias = self._quote_identifier(f"{alias_prefix}_{SnowflakeInferenceContextProvider.MAX_SUFFIX}")
+        count_null_alias = self._quote_identifier(
+            f"{alias_prefix}_{SnowflakeInferenceContextProvider.COUNT_NULL_SUFFIX}"
+        )
         statements = [
-            f"COUNT(DISTINCT {name}) AS {name}_{SnowflakeInferenceContextProvider.COUNT_DISTINCT_SUFFIX}",
-            f"MIN({name}) AS {name}_{SnowflakeInferenceContextProvider.MIN_SUFFIX}",
-            f"MAX({name}) AS {name}_{SnowflakeInferenceContextProvider.MAX_SUFFIX}",
+            f"COUNT(DISTINCT {column_reference}) AS {count_distinct_alias}",
+            f"MIN({column_reference}) AS {min_alias}",
+            f"MAX({column_reference}) AS {max_alias}",
             (
-                f"SUM(CASE WHEN {name} IS NULL THEN 1 ELSE 0 END) AS "
-                f"{name}_{SnowflakeInferenceContextProvider.COUNT_NULL_SUFFIX}"
+                f"SUM(CASE WHEN {column_reference} IS NULL THEN 1 ELSE 0 END) AS {count_null_alias}"
                 if count_nulls
-                else f"0 AS {name}_{SnowflakeInferenceContextProvider.COUNT_NULL_SUFFIX}"
+                else f"0 AS {count_null_alias}"
             ),
         ]
 
@@ -81,11 +95,12 @@ class SnowflakeInferenceContextProvider(DataWarehouseInferenceContextProvider):
         select_lists = []
 
         for row in all_columns.itertuples():
+            column_name = row.column_name
             column = SqlColumn.from_names(
                 db_name=row.database_name.lower(),
                 schema_name=row.schema_name.lower(),
                 table_name=row.table_name.lower(),
-                column_name=row.column_name.lower(),
+                column_name=column_name.lower(),
             )
             sql_column_list.append(column)
 
@@ -94,8 +109,9 @@ class SnowflakeInferenceContextProvider(DataWarehouseInferenceContextProvider):
             col_nullable[column] = type_dict["nullable"]
             select_lists.append(
                 self._get_select_list_for_column_name(
-                    name=column.column_name,
+                    name=column_name,
                     count_nulls=col_nullable[column],
+                    alias_prefix=column.column_name,
                 )
             )
 

@@ -57,7 +57,7 @@ def test_make_sql_client_supports_snowflake_key_pair_url(monkeypatch: pytest.Mon
 
     sql_client = make_sql_client(
         "snowflake://sf_user@my_account/sf_db?warehouse=wh1"
-        "&authenticator=SNOWFLAKE_JWT&private_key_file=%2Ftmp%2Frsa_key.p8&private_key_file_pwd=key-pass",
+        "&authenticator=SNOWFLAKE_JWT&private_key_file=%2Ftmp%2Frsa_key.p8",
         "",
     )
 
@@ -65,6 +65,23 @@ def test_make_sql_client_supports_snowflake_key_pair_url(monkeypatch: pytest.Mon
     assert sql_client._connection_url.password is None
     assert "authenticator" not in sql_client._connection_url.query
     assert "private_key_file" not in sql_client._connection_url.query
+    assert sql_client._auth_connect_args == {
+        "authenticator": "SNOWFLAKE_JWT",
+        "private_key_file": "/tmp/rsa_key.p8",
+    }
+    sql_client.close()
+
+
+def test_snowflake_key_pair_passphrase_uses_explicit_argument(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_snowflake_engine(monkeypatch)
+
+    sql_client = SnowflakeSqlClient.from_connection_details(
+        "snowflake://sf_user@my_account/sf_db?warehouse=wh1"
+        "&authenticator=SNOWFLAKE_JWT&private_key_file=%2Ftmp%2Frsa_key.p8",
+        "",
+        private_key_file_pwd="key-pass",
+    )
+
     assert sql_client._auth_connect_args == {
         "authenticator": "SNOWFLAKE_JWT",
         "private_key_file": "/tmp/rsa_key.p8",
@@ -80,10 +97,10 @@ def test_make_sql_client_rejects_missing_snowflake_credentials(monkeypatch: pyte
         make_sql_client("snowflake://sf_user@my_account/sf_db?warehouse=wh1", "")
 
 
-def test_make_sql_client_rejects_key_passphrase_without_key(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_make_sql_client_rejects_key_passphrase_in_url(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_snowflake_engine(monkeypatch)
 
-    with pytest.raises(ValueError, match="private_key_file_pwd requires private_key_file"):
+    with pytest.raises(ValueError, match="private_key_file_pwd must be supplied via the explicit argument"):
         make_sql_client("snowflake://sf_user@my_account/sf_db?warehouse=wh1&private_key_file_pwd=key-pass", "")
 
 

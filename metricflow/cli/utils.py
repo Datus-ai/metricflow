@@ -19,7 +19,10 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY_FILE,
+    CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_PROJECT_ID,
+    CONFIG_DWH_ROLE,
     CONFIG_DWH_SCHEMA,
     CONFIG_DWH_USER,
     CONFIG_DWH_WAREHOUSE,
@@ -102,8 +105,11 @@ MF_REDSHIFT_KEYS = (
 MF_SNOWFLAKE_KEYS = (
     ConfigKey(key=CONFIG_DWH_WAREHOUSE, comment="Provide the warehouse to use"),
     ConfigKey(key=CONFIG_DWH_DB),
-    ConfigKey(key=CONFIG_DWH_PASSWORD, comment="Password associated with the provided user"),
+    ConfigKey(key=CONFIG_DWH_PASSWORD, comment="Password associated with the provided user; omit for key pair auth"),
+    ConfigKey(key=CONFIG_DWH_PRIVATE_KEY_FILE, comment="PEM private key path for Snowflake key pair auth"),
+    ConfigKey(key=CONFIG_DWH_PRIVATE_KEY_FILE_PWD, comment="Optional passphrase for the private key file"),
     ConfigKey(key=CONFIG_DWH_USER, comment="Username for the data warehouse"),
+    ConfigKey(key=CONFIG_DWH_ROLE, comment="Optional Snowflake role"),
     ConfigKey(key=CONFIG_DWH_HOST, comment="Snowflake account name"),
     ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.SNOWFLAKE.value),
 )

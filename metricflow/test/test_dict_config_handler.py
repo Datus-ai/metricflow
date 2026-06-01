@@ -7,7 +7,10 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY_FILE,
+    CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_PROJECT_ID,
+    CONFIG_DWH_ROLE,
     CONFIG_DWH_SCHEMA,
     CONFIG_DWH_SSLMODE,
     CONFIG_DWH_USER,
@@ -110,10 +113,16 @@ class TestBuildConfigDictFromDbParams:
             schema="sf_schema",
             warehouse="wh1",
             account="my_account",
+            role="analytics_role",
+            private_key_file="/tmp/rsa_key.p8",
+            private_key_file_pwd="key-pass",
         )
         assert result[CONFIG_DWH_DIALECT] == "snowflake"
         assert result[CONFIG_DWH_WAREHOUSE] == "wh1"
         assert result[CONFIG_DWH_ACCOUNT] == "my_account"
+        assert result[CONFIG_DWH_ROLE] == "analytics_role"
+        assert result[CONFIG_DWH_PRIVATE_KEY_FILE] == "/tmp/rsa_key.p8"
+        assert result[CONFIG_DWH_PRIVATE_KEY_FILE_PWD] == "key-pass"
         assert result[CONFIG_DWH_SCHEMA] == "sf_schema"
 
     def test_bigquery(self):
@@ -126,6 +135,27 @@ class TestBuildConfigDictFromDbParams:
         assert result[CONFIG_DWH_DIALECT] == "bigquery"
         assert result[CONFIG_DWH_PROJECT_ID] == "my-project-123"
         assert result[CONFIG_DWH_SCHEMA] == "bq_schema"
+
+    def test_positional_arguments_preserve_existing_order(self):
+        result = build_config_dict_from_db_params(
+            "bigquery",
+            "",
+            "",
+            "",
+            "",
+            "bq_dataset",
+            "bq_schema",
+            "",
+            "",
+            "",
+            "my-project-123",
+            "/path/to/models",
+            "disable",
+        )
+
+        assert result[CONFIG_DWH_PROJECT_ID] == "my-project-123"
+        assert result[CONFIG_MODEL_PATH] == "/path/to/models"
+        assert result[CONFIG_DWH_SSLMODE] == "disable"
 
     def test_model_path(self):
         result = build_config_dict_from_db_params(
@@ -233,3 +263,36 @@ agent:
         )
 
         assert handler.get_value(CONFIG_DWH_SSLMODE) == "disable"
+
+    def test_get_value_returns_snowflake_key_pair_fields(self, tmp_path, monkeypatch):
+        key_file = tmp_path / "rsa_key.p8"
+        monkeypatch.setenv("SNOWFLAKE_KEY_FILE", str(key_file))
+
+        config_path = tmp_path / "agent.yml"
+        config_path.write_text(
+            """
+agent:
+  services:
+    datasources:
+      snowflake:
+        type: snowflake
+        account: sf_account
+        username: sf_user
+        role: analyst
+        private_key_file: ${SNOWFLAKE_KEY_FILE}
+        private_key_file_pwd: 1234
+        warehouse: wh1
+        database: sf_db
+""",
+            encoding="utf-8",
+        )
+
+        handler = DatusConfigHandler(
+            datasource="snowflake",
+            config_path=str(config_path),
+            project_root=str(tmp_path),
+        )
+
+        assert handler.get_value(CONFIG_DWH_ROLE) == "analyst"
+        assert handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE) == str(key_file)
+        assert handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE_PWD) == "1234"

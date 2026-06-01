@@ -77,6 +77,16 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
 
     DEFAULT_LOGIN_TIMEOUT = 60
     DEFAULT_CLIENT_SESSION_KEEP_ALIVE = True
+    KEY_PAIR_AUTHENTICATOR = "SNOWFLAKE_JWT"
+
+    @staticmethod
+    def _single_query_param(query_dict: Dict[str, List[str]], key: str, url: str) -> Optional[str]:
+        values = query_dict.get(key)
+        if not values:
+            return None
+        if len(values) > 1:
+            raise ValueError(f"Multiple {key} values in URL query: {url}")
+        return values[0]
 
     @staticmethod
     def _parse_url_query_params(url: str) -> Dict[str, str]:
@@ -86,26 +96,61 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         parsed_url = urllib.parse.urlparse(url)
         query_dict = urllib.parse.parse_qs(parsed_url.query)
 
-        if "warehouse" not in query_dict:
+        warehouse = SnowflakeSqlClient._single_query_param(query_dict, "warehouse", url)
+        if not warehouse:
             raise ValueError(f"Missing warehouse in URL query: {url}")
 
-        if len(query_dict["warehouse"]) > 1:
-            raise ValueError(f"Multiple warehouses in URL query: {url}")
-
-        url_query_params["warehouse"] = query_dict["warehouse"][0]
+        url_query_params["warehouse"] = warehouse
 
         # optionally, role
-        if "role" not in query_dict:
-            return url_query_params
-
-        if len(query_dict["role"]) > 1:
-            raise ValueError(f"Multiple roles in URL query: {url}")
-
-        url_query_params["role"] = query_dict["role"][0]
+        role = SnowflakeSqlClient._single_query_param(query_dict, "role", url)
+        if role:
+            url_query_params["role"] = role
         return url_query_params
 
     @staticmethod
-    def from_connection_details(url: str, password: Optional[str]) -> SnowflakeSqlClient:  # noqa: D
+    def _parse_url_key_pair_params(url: str) -> Tuple[Optional[str], Optional[str]]:
+        parsed_url = urllib.parse.urlparse(url)
+        query_dict = urllib.parse.parse_qs(parsed_url.query)
+        authenticator = SnowflakeSqlClient._single_query_param(query_dict, "authenticator", url)
+        if authenticator and authenticator != SnowflakeSqlClient.KEY_PAIR_AUTHENTICATOR:
+            raise ValueError(
+                f"Unsupported Snowflake authenticator in URL query: {authenticator}. "
+                f"Only {SnowflakeSqlClient.KEY_PAIR_AUTHENTICATOR} is supported for key pair authentication."
+            )
+        private_key_file = SnowflakeSqlClient._single_query_param(query_dict, "private_key_file", url)
+        if "private_key_file_pwd" in query_dict:
+            raise ValueError(
+                "Snowflake private_key_file_pwd must be supplied via the explicit argument/config path "
+                "and must not be included in the connection URL."
+            )
+        return private_key_file, None
+
+    @staticmethod
+    def _validate_credentials(
+        url: str,
+        password: Optional[str],
+        private_key_file: Optional[str],
+        private_key_file_pwd: Optional[str] = None,
+    ) -> None:
+        if private_key_file_pwd and not private_key_file:
+            raise ValueError(f"Snowflake private_key_file_pwd requires private_key_file: {url}")
+        has_password = bool(password)
+        has_key = bool(private_key_file)
+        if has_password == has_key:
+            raise ValueError(
+                "Snowflake connection requires exactly one of password or private_key_file "
+                f"(use private_key_file for key pair authentication): {url}"
+            )
+
+    @staticmethod
+    def from_connection_details(
+        url: str,
+        password: Optional[str],
+        private_key_file: Optional[str] = None,
+        private_key_file_pwd: Optional[str] = None,
+    ) -> SnowflakeSqlClient:  # noqa: D
+        password = password or None
         parsed_url = sqlalchemy.engine.make_url(url)
         if parsed_url.drivername != SqlDialect.SNOWFLAKE.value:
             raise ValueError(f"Invalid dialect in URL for Snowflake: {url}")
@@ -113,18 +158,23 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         if parsed_url.port:
             raise ValueError(f"Snowflake URL should not have a port set: {url}")
 
-        if not password:
-            raise ValueError(f"Password not supplied for {url}")
-
         SqlAlchemySqlClient.validate_query_params(
-            url=parsed_url, required_parameters={"warehouse"}, optional_parameters={"role"}
+            url=parsed_url,
+            required_parameters={"warehouse"},
+            optional_parameters={"role", "authenticator", "private_key_file", "private_key_file_pwd"},
         )
+        url_private_key_file, url_private_key_file_pwd = SnowflakeSqlClient._parse_url_key_pair_params(url)
+        private_key_file = private_key_file or url_private_key_file
+        private_key_file_pwd = private_key_file_pwd or url_private_key_file_pwd
+        SnowflakeSqlClient._validate_credentials(url, password, private_key_file, private_key_file_pwd)
 
         return SnowflakeSqlClient(
             host=not_empty(parsed_url.host, "host", url),
             username=not_empty(parsed_url.username, "username", url),
             password=password,
             database=not_empty(parsed_url.database, "database", url),
+            private_key_file=private_key_file,
+            private_key_file_pwd=private_key_file_pwd,
             url_query_params=SnowflakeSqlClient._parse_url_query_params(url),
         )
 
@@ -132,12 +182,20 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         self,
         database: str,
         username: str,
-        password: str,
+        password: Optional[str],
         host: str,
         url_query_params: Dict[str, str],
+        private_key_file: Optional[str] = None,
+        private_key_file_pwd: Optional[str] = None,
         login_timeout: int = DEFAULT_LOGIN_TIMEOUT,
         client_session_keep_alive: bool = DEFAULT_CLIENT_SESSION_KEEP_ALIVE,
     ) -> None:
+        SnowflakeSqlClient._validate_credentials(
+            str(SqlAlchemySqlClient.build_engine_url(SqlDialect.SNOWFLAKE.value, database, username, None, host)),
+            password,
+            private_key_file,
+            private_key_file_pwd,
+        )
         self._connection_url = SqlAlchemySqlClient.build_engine_url(
             dialect=SqlDialect.SNOWFLAKE.value,
             username=username,
@@ -146,6 +204,12 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
             database=database,
             query=url_query_params,
         )
+        self._auth_connect_args: Dict[str, str] = {}
+        if private_key_file:
+            self._auth_connect_args["authenticator"] = self.KEY_PAIR_AUTHENTICATOR
+            self._auth_connect_args["private_key_file"] = private_key_file
+            if private_key_file_pwd:
+                self._auth_connect_args["private_key_file_pwd"] = private_key_file_pwd
         self._engine_lock = threading.Lock()
         self._known_sessions_ids_lock = threading.Lock()
         self._known_session_ids: Set[int] = set()
@@ -158,12 +222,17 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         login_timeout: int = DEFAULT_LOGIN_TIMEOUT,
         client_session_keep_alive: bool = DEFAULT_CLIENT_SESSION_KEEP_ALIVE,
     ) -> sqlalchemy.engine.Engine:  # noqa: D
+        connect_args = {
+            "client_session_keep_alive": client_session_keep_alive,
+            "login_timeout": login_timeout,
+            **self._auth_connect_args,
+        }
         return sqlalchemy.create_engine(
             self._connection_url,
             pool_size=10,
             max_overflow=10,
             pool_pre_ping=False,
-            connect_args={"client_session_keep_alive": client_session_keep_alive, "login_timeout": login_timeout},
+            connect_args=connect_args,
         )
 
     @property
@@ -189,7 +258,7 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         check_isolation_level(self, isolation_level)
         with super()._engine_connection(self._engine, isolation_level=isolation_level) as conn:
             # WEEK_START 1 means Monday.
-            conn.execute("ALTER SESSION SET WEEK_START = 1;")
+            conn.execute(sqlalchemy.text("ALTER SESSION SET WEEK_START = 1;"))
             combined_tags: JsonDict = OrderedDict()
             if system_tags.tag_dict:
                 combined_tags[MF_SYSTEM_TAGS_KEY] = system_tags.tag_dict
@@ -199,9 +268,9 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
             if combined_tags:
                 conn.execute(
                     sqlalchemy.text("ALTER SESSION SET QUERY_TAG = :query_tag"),
-                    query_tag=json.dumps(combined_tags),
+                    {"query_tag": json.dumps(combined_tags)},
                 )
-            results = conn.execute("SELECT CURRENT_SESSION()")
+            results = conn.execute(sqlalchemy.text("SELECT CURRENT_SESSION()"))
             sessions = []
             for row in results:
                 sessions.append(row[0])
@@ -209,9 +278,11 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
             session = sessions[0]
             with self._known_sessions_ids_lock:
                 self._known_session_ids.add(session)
-            yield conn
-            with self._known_sessions_ids_lock:
-                self._known_session_ids.remove(session)
+            try:
+                yield conn
+            finally:
+                with self._known_sessions_ids_lock:
+                    self._known_session_ids.discard(session)
 
     def _query(  # noqa: D
         self,
@@ -274,7 +345,8 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
                 "Connection State",
                 lambda: str(
                     self.query(
-                        "SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_DATABASE(), CURRENT_WAREHOUSE(), CURRENT_SCHEMA();"
+                        "SELECT CURRENT_USER(), CURRENT_ROLE(), CURRENT_DATABASE(), "
+                        "CURRENT_WAREHOUSE(), CURRENT_SCHEMA();"
                     )
                 ),
             )
@@ -291,7 +363,7 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
             with self._known_sessions_ids_lock:
                 for session_id in self._known_session_ids:
                     logger.info(f"Cancelling queries associated with session id: {session_id}")
-                    conn.execute(f"SELECT SYSTEM$cancel_all_queries({session_id})")
+                    conn.execute(sqlalchemy.text(f"SELECT SYSTEM$cancel_all_queries({session_id})"))
 
     def cancel_request(self, match_function: Callable[[CombinedSqlTags], bool]) -> int:  # noqa: D
         # Running queries have an end_time set to the epoch time:

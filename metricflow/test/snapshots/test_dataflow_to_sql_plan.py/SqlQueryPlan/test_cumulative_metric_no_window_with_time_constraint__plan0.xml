@@ -46,7 +46,7 @@
                 <!-- where = None -->
                 <SqlSelectStatementNode>
                     <!-- description =                                                         -->
-                    <!--   Constrain Time Range to [2000-01-01T00:00:00, 2020-01-01T00:00:00]  -->
+                    <!--   Constrain Time Range to [1900-01-01T00:00:00, 2020-01-01T00:00:00]  -->
                     <!-- node_id = ss_10 -->
                     <!-- col0 =                                                    -->
                     <!--   {'class': 'SqlSelectColumn',                            -->

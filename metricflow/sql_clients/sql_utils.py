@@ -11,6 +11,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_DIALECT,
     CONFIG_DWH_HOST,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY,
     CONFIG_DWH_PRIVATE_KEY_FILE,
     CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_ROLE,
@@ -205,12 +206,14 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         return SqliteSqlClient(file_path=database)
     elif dialect == SqlDialect.SNOWFLAKE.value:
         password = handler.get_value(CONFIG_DWH_PASSWORD) or None
+        private_key = handler.get_value(CONFIG_DWH_PRIVATE_KEY) or None
         private_key_file = handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE) or None
         private_key_file_pwd = handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE_PWD) or None
         snowflake_url = _snowflake_url_from_config(handler)
         return SnowflakeSqlClient.from_connection_details(
             snowflake_url,
             password,
+            private_key=private_key,
             private_key_file=private_key_file,
             private_key_file_pwd=private_key_file_pwd,
         )

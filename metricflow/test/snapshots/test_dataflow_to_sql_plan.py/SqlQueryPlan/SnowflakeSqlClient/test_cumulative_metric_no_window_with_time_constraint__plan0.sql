@@ -14,7 +14,7 @@ FROM (
       subq_2.ds__month
       , subq_2.txn_revenue
     FROM (
-      -- Constrain Time Range to [2000-01-01T00:00:00, 2020-01-01T00:00:00]
+      -- Constrain Time Range to [1900-01-01T00:00:00, 2020-01-01T00:00:00]
       SELECT
         subq_1.ds
         , subq_1.ds__week
@@ -59,7 +59,7 @@ FROM (
           ) revenue_src_10006
         ) subq_0
       ) subq_1
-      WHERE subq_1.metric_time BETWEEN CAST('2000-01-01' AS TIMESTAMP) AND CAST('2020-01-01' AS TIMESTAMP)
+      WHERE subq_1.metric_time BETWEEN CAST('1900-01-01' AS TIMESTAMP) AND CAST('2020-01-01' AS TIMESTAMP)
     ) subq_2
   ) subq_4
   GROUP BY

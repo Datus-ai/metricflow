@@ -12,6 +12,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_DIALECT,
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
+    CONFIG_DWH_PRIVATE_KEY,
     CONFIG_DWH_PRIVATE_KEY_FILE,
     CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_ROLE,
@@ -24,6 +25,29 @@ from metricflow.protocols.sql_request import MF_EXTRA_TAGS_KEY, SqlJsonTag
 from metricflow.sql_clients.snowflake import SnowflakeSqlClient
 from metricflow.sql_clients.sql_utils import make_sql_client, make_sql_client_from_config
 from metricflow.sql_clients.sqlalchemy_dialect import SqlAlchemySqlClient
+
+
+def _private_key_pem(passphrase: bytes | None = None) -> tuple[str, bytes]:
+    serialization = pytest.importorskip("cryptography.hazmat.primitives.serialization")
+    rsa = pytest.importorskip("cryptography.hazmat.primitives.asymmetric.rsa")
+
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    if passphrase:
+        encryption_algorithm = serialization.BestAvailableEncryption(passphrase)
+    else:
+        encryption_algorithm = serialization.NoEncryption()
+
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=encryption_algorithm,
+    ).decode("utf-8")
+    der = private_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    return pem, der
 
 
 def _stub_snowflake_engine(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -90,10 +114,45 @@ def test_snowflake_key_pair_passphrase_uses_explicit_argument(monkeypatch: pytes
     sql_client.close()
 
 
+def test_snowflake_private_key_argument_uses_der_connect_arg(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_snowflake_engine(monkeypatch)
+    private_key, expected_der = _private_key_pem()
+
+    sql_client = SnowflakeSqlClient.from_connection_details(
+        "snowflake://sf_user@my_account/sf_db?warehouse=wh1",
+        None,
+        private_key=private_key.replace("\n", "\\n"),
+    )
+
+    assert sql_client._auth_connect_args == {
+        "authenticator": "SNOWFLAKE_JWT",
+        "private_key": expected_der,
+    }
+    sql_client.close()
+
+
+def test_snowflake_private_key_passphrase_decrypts_pem(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_snowflake_engine(monkeypatch)
+    private_key, expected_der = _private_key_pem(passphrase=b"key-pass")
+
+    sql_client = SnowflakeSqlClient.from_connection_details(
+        "snowflake://sf_user@my_account/sf_db?warehouse=wh1",
+        None,
+        private_key=private_key,
+        private_key_file_pwd="key-pass",
+    )
+
+    assert sql_client._auth_connect_args == {
+        "authenticator": "SNOWFLAKE_JWT",
+        "private_key": expected_der,
+    }
+    sql_client.close()
+
+
 def test_make_sql_client_rejects_missing_snowflake_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_snowflake_engine(monkeypatch)
 
-    with pytest.raises(ValueError, match="exactly one of password or private_key_file"):
+    with pytest.raises(ValueError, match="exactly one of password, private_key, or private_key_file"):
         make_sql_client("snowflake://sf_user@my_account/sf_db?warehouse=wh1", "")
 
 
@@ -107,10 +166,21 @@ def test_make_sql_client_rejects_key_passphrase_in_url(monkeypatch: pytest.Monke
 def test_make_sql_client_rejects_multiple_snowflake_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_snowflake_engine(monkeypatch)
 
-    with pytest.raises(ValueError, match="exactly one of password or private_key_file"):
+    with pytest.raises(ValueError, match="exactly one of password, private_key, or private_key_file"):
         make_sql_client(
             "snowflake://sf_user@my_account/sf_db?warehouse=wh1&private_key_file=%2Ftmp%2Frsa_key.p8",
             "sf_pw",
+        )
+
+
+def test_snowflake_key_passphrase_requires_key_material(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_snowflake_engine(monkeypatch)
+
+    with pytest.raises(ValueError, match="private_key_file_pwd requires private_key or private_key_file"):
+        SnowflakeSqlClient.from_connection_details(
+            "snowflake://sf_user@my_account/sf_db?warehouse=wh1",
+            None,
+            private_key_file_pwd="key-pass",
         )
 
 
@@ -161,6 +231,33 @@ def test_make_sql_client_from_config_supports_snowflake_key_pair(monkeypatch: py
         "authenticator": "SNOWFLAKE_JWT",
         "private_key_file": "/tmp/rsa_key.p8",
         "private_key_file_pwd": "key-pass",
+    }
+    sql_client.close()
+
+
+def test_make_sql_client_from_config_supports_snowflake_private_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _stub_snowflake_engine(monkeypatch)
+    private_key, expected_der = _private_key_pem(passphrase=b"key-pass")
+    handler = DictConfigHandler(
+        {
+            CONFIG_DWH_DIALECT: "snowflake",
+            CONFIG_DWH_ACCOUNT: "configured_account",
+            CONFIG_DWH_USER: "sf_user",
+            CONFIG_DWH_DB: "sf_db",
+            CONFIG_DWH_WAREHOUSE: "wh1",
+            CONFIG_DWH_PRIVATE_KEY: private_key,
+            CONFIG_DWH_PRIVATE_KEY_FILE_PWD: "key-pass",
+        }
+    )
+
+    sql_client = make_sql_client_from_config(handler)
+
+    assert isinstance(sql_client, SnowflakeSqlClient)
+    assert sql_client._connection_url.password is None
+    assert sql_client._connection_url.host == "configured_account"
+    assert sql_client._auth_connect_args == {
+        "authenticator": "SNOWFLAKE_JWT",
+        "private_key": expected_der,
     }
     sql_client.close()
 

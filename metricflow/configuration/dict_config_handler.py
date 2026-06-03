@@ -1,6 +1,6 @@
 import os
 import pathlib
-from typing import Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 from metricflow.configuration.constants import (
     CONFIG_DWH_ACCOUNT,
@@ -9,6 +9,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY,
     CONFIG_DWH_PRIVATE_KEY_FILE,
     CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_PROJECT_ID,
@@ -63,6 +64,7 @@ def build_config_dict_from_db_params(
     model_path: str = "",
     sslmode: str = "",
     role: str = "",
+    private_key: str = "",
     private_key_file: str = "",
     private_key_file_pwd: str = "",
 ) -> Dict[str, str]:
@@ -114,6 +116,7 @@ def build_config_dict_from_db_params(
     result[CONFIG_DWH_WAREHOUSE] = warehouse
     result[CONFIG_DWH_ACCOUNT] = account
     result[CONFIG_DWH_ROLE] = role
+    result[CONFIG_DWH_PRIVATE_KEY] = private_key
     result[CONFIG_DWH_PRIVATE_KEY_FILE] = private_key_file
     result[CONFIG_DWH_PRIVATE_KEY_FILE_PWD] = private_key_file_pwd
 
@@ -128,6 +131,39 @@ def build_config_dict_from_db_params(
         result[CONFIG_MODEL_PATH] = model_path
 
     return result
+
+
+def _string_config_value(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+
+def build_config_dict_from_datus_datasource(db_config: Mapping[str, Any], model_path: str = "") -> Dict[str, str]:
+    """Build a MetricFlow config dict from a raw Datus datasource config."""
+    schema = db_config.get("schema")
+    if schema is None or schema == "":
+        schema = db_config.get("schema_name", "")
+
+    return build_config_dict_from_db_params(
+        db_type=_string_config_value(db_config.get("type")),
+        host=_string_config_value(db_config.get("host")),
+        port=_string_config_value(db_config.get("port")),
+        username=_string_config_value(db_config.get("username")),
+        password=_string_config_value(db_config.get("password")),
+        database=_string_config_value(db_config.get("database")),
+        schema=_string_config_value(schema),
+        uri=_string_config_value(db_config.get("uri")),
+        warehouse=_string_config_value(db_config.get("warehouse")),
+        account=_string_config_value(db_config.get("account")),
+        project_id=_string_config_value(db_config.get("project_id")),
+        model_path=model_path,
+        sslmode=_string_config_value(db_config.get("sslmode")),
+        role=_string_config_value(db_config.get("role")),
+        private_key=_string_config_value(db_config.get("private_key")),
+        private_key_file=_string_config_value(db_config.get("private_key_file")),
+        private_key_file_pwd=_string_config_value(db_config.get("private_key_file_pwd")),
+    )
 
 
 class DictConfigHandler(YamlFileHandler):

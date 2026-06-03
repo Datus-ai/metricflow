@@ -7,6 +7,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY,
     CONFIG_DWH_PRIVATE_KEY_FILE,
     CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_PROJECT_ID,
@@ -20,6 +21,7 @@ from metricflow.configuration.constants import (
 from metricflow.configuration.datus_config_handler import DatusConfigHandler
 from metricflow.configuration.dict_config_handler import (
     DictConfigHandler,
+    build_config_dict_from_datus_datasource,
     build_config_dict_from_db_params,
 )
 
@@ -114,6 +116,7 @@ class TestBuildConfigDictFromDbParams:
             warehouse="wh1",
             account="my_account",
             role="analytics_role",
+            private_key="inline-private-key",
             private_key_file="/tmp/rsa_key.p8",
             private_key_file_pwd="key-pass",
         )
@@ -121,6 +124,7 @@ class TestBuildConfigDictFromDbParams:
         assert result[CONFIG_DWH_WAREHOUSE] == "wh1"
         assert result[CONFIG_DWH_ACCOUNT] == "my_account"
         assert result[CONFIG_DWH_ROLE] == "analytics_role"
+        assert result[CONFIG_DWH_PRIVATE_KEY] == "inline-private-key"
         assert result[CONFIG_DWH_PRIVATE_KEY_FILE] == "/tmp/rsa_key.p8"
         assert result[CONFIG_DWH_PRIVATE_KEY_FILE_PWD] == "key-pass"
         assert result[CONFIG_DWH_SCHEMA] == "sf_schema"
@@ -189,6 +193,60 @@ class TestBuildConfigDictFromDbParams:
             database="ch_db",
         )
         assert result[CONFIG_DWH_DIALECT] == "clickhouse"
+
+
+class TestBuildConfigDictFromDatusDatasource:
+    def test_builds_config_from_raw_snowflake_datasource(self):
+        result = build_config_dict_from_datus_datasource(
+            {
+                "type": "snowflake",
+                "account": "sf_account",
+                "username": "sf_user",
+                "database": "sf_db",
+                "schema_name": "sf_schema",
+                "warehouse": "wh1",
+                "role": "analyst",
+                "private_key": "inline-private-key",
+                "private_key_file_pwd": 1234,
+            },
+            model_path="/tmp/models",
+        )
+
+        assert result[CONFIG_DWH_DIALECT] == "snowflake"
+        assert result[CONFIG_DWH_ACCOUNT] == "sf_account"
+        assert result[CONFIG_DWH_USER] == "sf_user"
+        assert result[CONFIG_DWH_DB] == "sf_db"
+        assert result[CONFIG_DWH_SCHEMA] == "sf_schema"
+        assert result[CONFIG_DWH_WAREHOUSE] == "wh1"
+        assert result[CONFIG_DWH_ROLE] == "analyst"
+        assert result[CONFIG_DWH_PRIVATE_KEY] == "inline-private-key"
+        assert result[CONFIG_DWH_PRIVATE_KEY_FILE_PWD] == "1234"
+        assert result[CONFIG_MODEL_PATH] == "/tmp/models"
+
+    def test_builds_config_from_raw_postgres_datasource(self):
+        result = build_config_dict_from_datus_datasource(
+            {
+                "type": "postgres",
+                "host": "localhost",
+                "port": 15432,
+                "username": "datus",
+                "password": "secret",
+                "database": "analytics",
+                "schema": "public",
+                "sslmode": "require",
+            },
+            model_path="/tmp/models",
+        )
+
+        assert result[CONFIG_DWH_DIALECT] == "postgresql"
+        assert result[CONFIG_DWH_HOST] == "localhost"
+        assert result[CONFIG_DWH_PORT] == "15432"
+        assert result[CONFIG_DWH_USER] == "datus"
+        assert result[CONFIG_DWH_PASSWORD] == "secret"
+        assert result[CONFIG_DWH_DB] == "analytics"
+        assert result[CONFIG_DWH_SCHEMA] == "public"
+        assert result[CONFIG_DWH_SSLMODE] == "require"
+        assert result[CONFIG_MODEL_PATH] == "/tmp/models"
 
 
 class TestDictConfigHandler:
@@ -267,6 +325,7 @@ agent:
     def test_get_value_returns_snowflake_key_pair_fields(self, tmp_path, monkeypatch):
         key_file = tmp_path / "rsa_key.p8"
         monkeypatch.setenv("SNOWFLAKE_KEY_FILE", str(key_file))
+        monkeypatch.setenv("SNOWFLAKE_PRIVATE_KEY", "inline-private-key")
 
         config_path = tmp_path / "agent.yml"
         config_path.write_text(
@@ -279,6 +338,7 @@ agent:
         account: sf_account
         username: sf_user
         role: analyst
+        private_key: ${SNOWFLAKE_PRIVATE_KEY}
         private_key_file: ${SNOWFLAKE_KEY_FILE}
         private_key_file_pwd: 1234
         warehouse: wh1
@@ -294,5 +354,6 @@ agent:
         )
 
         assert handler.get_value(CONFIG_DWH_ROLE) == "analyst"
+        assert handler.get_value(CONFIG_DWH_PRIVATE_KEY) == "inline-private-key"
         assert handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE) == str(key_file)
         assert handler.get_value(CONFIG_DWH_PRIVATE_KEY_FILE_PWD) == "1234"

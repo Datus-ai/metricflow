@@ -11,6 +11,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_HOST,
     CONFIG_DWH_PASSWORD,
     CONFIG_DWH_PORT,
+    CONFIG_DWH_PRIVATE_KEY,
     CONFIG_DWH_PRIVATE_KEY_FILE,
     CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_SCHEMA,
@@ -222,6 +223,9 @@ class DatusConfigHandler(YamlFileHandler):
 
         if key == CONFIG_DWH_ROLE:
             return self._resolve_env_vars(self.db_config.get("role", ""))
+
+        if key == CONFIG_DWH_PRIVATE_KEY:
+            return self._resolve_env_vars(self.db_config.get("private_key", ""))
 
         if key == CONFIG_DWH_PRIVATE_KEY_FILE:
             return self._resolve_env_vars(self.db_config.get("private_key_file", ""))

@@ -14,7 +14,7 @@ FROM (
       subq_2.ds__month
       , subq_2.txn_revenue
     FROM (
-      -- Constrain Time Range to [2000-01-01T00:00:00, 2020-01-01T00:00:00]
+      -- Constrain Time Range to [1900-01-01T00:00:00, 2020-01-01T00:00:00]
       SELECT
         subq_1.ds
         , subq_1.ds__week

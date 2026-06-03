@@ -32,11 +32,11 @@ class TimeRangeConstraint(SerializableDataclass):
 
     @staticmethod
     def ALL_TIME_BEGIN() -> datetime.datetime:  # noqa: D
-        return datetime.datetime(2000, 1, 1)
+        return datetime.datetime(1900, 1, 1)
 
     @staticmethod
     def ALL_TIME_END() -> datetime.datetime:  # noqa: D
-        return datetime.datetime(2040, 12, 31)
+        return datetime.datetime(2100, 12, 31)
 
     @staticmethod
     def all_time() -> TimeRangeConstraint:

@@ -127,26 +127,70 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         return private_key_file, None
 
     @staticmethod
+    def _private_key_to_der(private_key: str, private_key_file_pwd: Optional[str] = None) -> bytes:
+        """Convert a PEM private key string into DER bytes accepted by the Snowflake connector."""
+        try:
+            from cryptography.hazmat.primitives import serialization
+        except ImportError as exc:
+            raise ValueError("Snowflake private_key requires the cryptography package to be installed.") from exc
+
+        private_key_pem = private_key.strip()
+        if "\\n" in private_key_pem and "\n" not in private_key_pem:
+            private_key_pem = private_key_pem.replace("\\n", "\n")
+
+        passphrase = private_key_file_pwd.encode("utf-8") if private_key_file_pwd else None
+        pem_bytes = private_key_pem.encode("utf-8")
+
+        try:
+            loaded_private_key = serialization.load_pem_private_key(pem_bytes, password=passphrase)
+        except TypeError as exc:
+            if passphrase is None:
+                raise ValueError(
+                    "Failed to load Snowflake private_key PEM. Check that private_key and private_key_file_pwd "
+                    "are valid."
+                ) from exc
+            try:
+                loaded_private_key = serialization.load_pem_private_key(pem_bytes, password=None)
+            except (TypeError, ValueError) as retry_exc:
+                raise ValueError(
+                    "Failed to load Snowflake private_key PEM. Check that private_key and private_key_file_pwd "
+                    "are valid."
+                ) from retry_exc
+        except ValueError as exc:
+            raise ValueError(
+                "Failed to load Snowflake private_key PEM. Check that private_key and private_key_file_pwd are valid."
+            ) from exc
+
+        return loaded_private_key.private_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+
+    @staticmethod
     def _validate_credentials(
         url: str,
         password: Optional[str],
+        private_key: Optional[str],
         private_key_file: Optional[str],
         private_key_file_pwd: Optional[str] = None,
     ) -> None:
-        if private_key_file_pwd and not private_key_file:
-            raise ValueError(f"Snowflake private_key_file_pwd requires private_key_file: {url}")
+        if private_key_file_pwd and not (private_key or private_key_file):
+            raise ValueError(f"Snowflake private_key_file_pwd requires private_key or private_key_file: {url}")
         has_password = bool(password)
-        has_key = bool(private_key_file)
-        if has_password == has_key:
+        has_private_key = bool(private_key)
+        has_private_key_file = bool(private_key_file)
+        if sum((has_password, has_private_key, has_private_key_file)) != 1:
             raise ValueError(
-                "Snowflake connection requires exactly one of password or private_key_file "
-                f"(use private_key_file for key pair authentication): {url}"
+                "Snowflake connection requires exactly one of password, private_key, or private_key_file "
+                f"(use private_key or private_key_file for key pair authentication): {url}"
             )
 
     @staticmethod
     def from_connection_details(
         url: str,
         password: Optional[str],
+        private_key: Optional[str] = None,
         private_key_file: Optional[str] = None,
         private_key_file_pwd: Optional[str] = None,
     ) -> SnowflakeSqlClient:  # noqa: D
@@ -166,13 +210,14 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         url_private_key_file, url_private_key_file_pwd = SnowflakeSqlClient._parse_url_key_pair_params(url)
         private_key_file = private_key_file or url_private_key_file
         private_key_file_pwd = private_key_file_pwd or url_private_key_file_pwd
-        SnowflakeSqlClient._validate_credentials(url, password, private_key_file, private_key_file_pwd)
+        SnowflakeSqlClient._validate_credentials(url, password, private_key, private_key_file, private_key_file_pwd)
 
         return SnowflakeSqlClient(
             host=not_empty(parsed_url.host, "host", url),
             username=not_empty(parsed_url.username, "username", url),
             password=password,
             database=not_empty(parsed_url.database, "database", url),
+            private_key=private_key,
             private_key_file=private_key_file,
             private_key_file_pwd=private_key_file_pwd,
             url_query_params=SnowflakeSqlClient._parse_url_query_params(url),
@@ -185,6 +230,7 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         password: Optional[str],
         host: str,
         url_query_params: Dict[str, str],
+        private_key: Optional[str] = None,
         private_key_file: Optional[str] = None,
         private_key_file_pwd: Optional[str] = None,
         login_timeout: int = DEFAULT_LOGIN_TIMEOUT,
@@ -193,6 +239,7 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
         SnowflakeSqlClient._validate_credentials(
             str(SqlAlchemySqlClient.build_engine_url(SqlDialect.SNOWFLAKE.value, database, username, None, host)),
             password,
+            private_key,
             private_key_file,
             private_key_file_pwd,
         )
@@ -204,8 +251,11 @@ class SnowflakeSqlClient(SqlAlchemySqlClient):
             database=database,
             query=url_query_params,
         )
-        self._auth_connect_args: Dict[str, str] = {}
-        if private_key_file:
+        self._auth_connect_args: Dict[str, Any] = {}
+        if private_key:
+            self._auth_connect_args["authenticator"] = self.KEY_PAIR_AUTHENTICATOR
+            self._auth_connect_args["private_key"] = self._private_key_to_der(private_key, private_key_file_pwd)
+        elif private_key_file:
             self._auth_connect_args["authenticator"] = self.KEY_PAIR_AUTHENTICATOR
             self._auth_connect_args["private_key_file"] = private_key_file
             if private_key_file_pwd:

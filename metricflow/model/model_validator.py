@@ -77,7 +77,7 @@ class ModelValidator:
             raise ValueError("ModelValidator 'rules' must be a sequence with at least one ModelValidationRule.")
 
         self._rules = rules
-        self._executor = ProcessPoolExecutor(max_workers=max_workers)
+        self._max_workers = max_workers
 
     def validate_model(self, model: UserConfiguredModel) -> ModelBuildResult:
         """Validate a model according to configured rules."""
@@ -85,14 +85,15 @@ class ModelValidator:
 
         results: List[ModelValidationResults] = []
 
-        futures = [
-            self._executor.submit(validation_rule.validate_model_serialized_for_multiprocessing, serialized_model)
-            for validation_rule in self._rules
-        ]
-        for future in as_completed(futures):
-            res = future.result()
-            result = ModelValidationResults.parse_raw(res)
-            results.append(result)
+        with ProcessPoolExecutor(max_workers=self._max_workers) as executor:
+            futures = [
+                executor.submit(validation_rule.validate_model_serialized_for_multiprocessing, serialized_model)
+                for validation_rule in self._rules
+            ]
+            for future in as_completed(futures):
+                res = future.result()
+                result = ModelValidationResults.parse_raw(res)
+                results.append(result)
 
         return ModelBuildResult(model=model, issues=ModelValidationResults.merge(results))
 

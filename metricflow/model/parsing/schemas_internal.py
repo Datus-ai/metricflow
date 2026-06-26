@@ -75,6 +75,8 @@ locked_metadata_schema = {
         },
         "private": {"type": "boolean"},
         "unit": {"type": "string"},
+        # Stable node identity assigned by the Semantic Hub.
+        "uid": {"type": "string"},
     },
     "additionalProperties": False,
 }
@@ -89,6 +91,7 @@ add_transform_metadata_fields_to_spec(metric_schema)
 add_locked_metadata_to_spec(metric_schema)
 
 add_transform_metadata_fields_to_spec(data_source_schema)
+add_locked_metadata_to_spec(data_source_schema)
 add_transform_metadata_fields_to_spec(materialization_schema)
 add_transform_metadata_fields_to_spec(derived_group_by_element_schema)
 

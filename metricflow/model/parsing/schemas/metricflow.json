@@ -61,6 +61,9 @@
                     },
                     "type": "array"
                 },
+                "locked_metadata": {
+                    "$ref": "#/definitions/locked_metadata"
+                },
                 "measures": {
                     "items": {
                         "$ref": "#/definitions/measure_schema"
@@ -340,6 +343,9 @@
                 "increase_is_good": {
                     "type": "boolean"
                 },
+                "owner": {
+                    "type": "string"
+                },
                 "private": {
                     "type": "boolean"
                 },
@@ -354,6 +360,9 @@
                         "string",
                         "integer"
                     ]
+                },
+                "uid": {
+                    "type": "string"
                 },
                 "unit": {
                     "type": "string"

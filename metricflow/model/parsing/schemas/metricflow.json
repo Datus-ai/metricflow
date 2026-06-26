@@ -343,6 +343,9 @@
                 "increase_is_good": {
                     "type": "boolean"
                 },
+                "owner": {
+                    "type": "string"
+                },
                 "private": {
                     "type": "boolean"
                 },

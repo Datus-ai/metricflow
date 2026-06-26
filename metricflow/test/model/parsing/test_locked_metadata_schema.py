@@ -21,7 +21,7 @@ def test_metric_locked_metadata_accepts_uid() -> None:
             "name": "bookings",
             "type": "measure_proxy",
             "type_params": {"measures": ["bookings"]},
-            "locked_metadata": {"uid": "01HZX9Q2K7", "tags": ["t"]},
+            "locked_metadata": {"uid": "01HZX9Q2K7", "owner": "arno@datus.ai", "tags": ["t"]},
         }
     )
 
@@ -31,7 +31,7 @@ def test_data_source_accepts_locked_metadata_uid() -> None:
         {
             "name": "id_verifications",
             "sql_table": "fct_id_verifications",
-            "locked_metadata": {"uid": "01HZX9Q2K7"},
+            "locked_metadata": {"uid": "01HZX9Q2K7", "owner": "arno@datus.ai"},
         }
     )
 

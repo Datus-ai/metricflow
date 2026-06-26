@@ -77,6 +77,8 @@ locked_metadata_schema = {
         "unit": {"type": "string"},
         # Stable node identity assigned by the Semantic Hub.
         "uid": {"type": "string"},
+        # Node owner / creator.
+        "owner": {"type": "string"},
     },
     "additionalProperties": False,
 }

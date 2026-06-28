@@ -338,6 +338,34 @@ class TestDictConfigHandler:
 
 
 class TestDatusConfigHandler:
+    def test_get_value_resolves_database_and_catalog_aliases(self, tmp_path):
+        config_path = tmp_path / "agent.yml"
+        config_path.write_text(
+            """
+agent:
+  services:
+    datasources:
+      starrocks:
+        type: starrocks
+        host: sr-host
+        database_name: runtime_db
+      trino:
+        type: trino
+        host: trino-host
+        catalog_name: tpch
+        database_name: tiny
+""",
+            encoding="utf-8",
+        )
+
+        starrocks_handler = DatusConfigHandler("starrocks", config_path=str(config_path))
+        assert starrocks_handler.get_value(CONFIG_DWH_DB) == "runtime_db"
+        assert starrocks_handler.get_value(CONFIG_DWH_SCHEMA) == "runtime_db"
+
+        trino_handler = DatusConfigHandler("trino", config_path=str(config_path))
+        assert trino_handler.get_value(CONFIG_DWH_DB) == "tpch"
+        assert trino_handler.get_value(CONFIG_DWH_SCHEMA) == "tiny"
+
     def test_get_value_returns_sslmode_from_datasource_config(self, tmp_path):
         config_path = tmp_path / "agent.yml"
         config_path.write_text(

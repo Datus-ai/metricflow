@@ -49,7 +49,7 @@ class TrinoEngineAttributes:
 class TrinoSqlClient(SqlAlchemySqlClient):
     """Implements Trino.
 
-    Uses the trino:// SQLAlchemy driver. URL format: trino://user@host:port/catalog
+    Uses the trino:// SQLAlchemy driver. URL format: trino://user@host:port/catalog[/schema]
     """
 
     @staticmethod
@@ -79,7 +79,7 @@ class TrinoSqlClient(SqlAlchemySqlClient):
         host: str,
         password: str = "",
     ) -> None:
-        # Trino URL format: trino://user:password@host:port/catalog
+        # Trino URL format: trino://user:password@host:port/catalog[/schema]
         connect_url = sqlalchemy.engine.url.URL.create(
             drivername="trino",
             username=username,

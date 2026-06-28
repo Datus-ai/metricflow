@@ -48,6 +48,8 @@ DEFAULT_SCHEMA_MAPPING = {
     "greenplum": "public",
 }
 
+SCHEMA_EQUALS_DATABASE_TYPES = {"mysql", "starrocks", "clickhouse"}
+
 
 def build_config_dict_from_db_params(
     db_type: str,
@@ -67,6 +69,7 @@ def build_config_dict_from_db_params(
     private_key: str = "",
     private_key_file: str = "",
     private_key_file_pwd: str = "",
+    catalog: str = "",
 ) -> Dict[str, str]:
     """Build a MetricFlow config dict from database connection parameters.
 
@@ -88,22 +91,24 @@ def build_config_dict_from_db_params(
     result[CONFIG_DWH_PASSWORD] = password
     result[CONFIG_DWH_SSLMODE] = sslmode
 
-    # Database — file-based DBs use uri
+    # Database — file-based DBs use uri; Trino uses catalog as the URL database segment.
     if db_type_lower in ("sqlite", "duckdb") and uri:
         db_path = uri
         prefix = f"{db_type_lower}:///"
         if db_path.startswith(prefix):
             db_path = db_path[len(prefix) :]
         result[CONFIG_DWH_DB] = os.path.expanduser(db_path)
+    elif db_type_lower == "trino" and catalog:
+        result[CONFIG_DWH_DB] = catalog
     else:
         result[CONFIG_DWH_DB] = database
 
     # Schema — with defaults per DB type
     if schema:
         result[CONFIG_DWH_SCHEMA] = schema
-    elif db_type_lower == "starrocks":
+    elif db_type_lower == "trino" and catalog and database:
         result[CONFIG_DWH_SCHEMA] = database
-    elif db_type_lower == "clickhouse":
+    elif db_type_lower in SCHEMA_EQUALS_DATABASE_TYPES and database:
         result[CONFIG_DWH_SCHEMA] = database
     elif db_type_lower == "trino":
         result[CONFIG_DWH_SCHEMA] = "default"
@@ -141,9 +146,17 @@ def _string_config_value(value: Any) -> str:
 
 def build_config_dict_from_datus_datasource(db_config: Mapping[str, Any], model_path: str = "") -> Dict[str, str]:
     """Build a MetricFlow config dict from a raw Datus datasource config."""
+    database = db_config.get("database")
+    if database is None or database == "":
+        database = db_config.get("database_name", "")
+
     schema = db_config.get("schema")
     if schema is None or schema == "":
-        schema = db_config.get("schema_name", "")
+        schema = db_config.get("db_schema") or db_config.get("schema_name", "")
+
+    catalog = db_config.get("catalog")
+    if catalog is None or catalog == "":
+        catalog = db_config.get("catalog_name", "")
 
     return build_config_dict_from_db_params(
         db_type=_string_config_value(db_config.get("type")),
@@ -151,7 +164,7 @@ def build_config_dict_from_datus_datasource(db_config: Mapping[str, Any], model_
         port=_string_config_value(db_config.get("port")),
         username=_string_config_value(db_config.get("username")),
         password=_string_config_value(db_config.get("password")),
-        database=_string_config_value(db_config.get("database")),
+        database=_string_config_value(database),
         schema=_string_config_value(schema),
         uri=_string_config_value(db_config.get("uri")),
         warehouse=_string_config_value(db_config.get("warehouse")),
@@ -163,6 +176,7 @@ def build_config_dict_from_datus_datasource(db_config: Mapping[str, Any], model_
         private_key=_string_config_value(db_config.get("private_key")),
         private_key_file=_string_config_value(db_config.get("private_key_file")),
         private_key_file_pwd=_string_config_value(db_config.get("private_key_file_pwd")),
+        catalog=_string_config_value(catalog),
     )
 
 

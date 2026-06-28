@@ -44,7 +44,7 @@ class TestBuildConfigDictFromDbParams:
         assert result[CONFIG_DWH_USER] == "root"
         assert result[CONFIG_DWH_PASSWORD] == "secret"
         assert result[CONFIG_DWH_DB] == "mydb"
-        assert result[CONFIG_DWH_SCHEMA] == "default"
+        assert result[CONFIG_DWH_SCHEMA] == "mydb"
 
     def test_starrocks(self):
         result = build_config_dict_from_db_params(
@@ -176,9 +176,14 @@ class TestBuildConfigDictFromDbParams:
     def test_explicit_schema_overrides_default(self):
         result = build_config_dict_from_db_params(
             db_type="mysql",
+            database="mydb",
             schema="custom_schema",
         )
         assert result[CONFIG_DWH_SCHEMA] == "custom_schema"
+
+    def test_mysql_without_database_keeps_legacy_default_schema(self):
+        result = build_config_dict_from_db_params(db_type="mysql")
+        assert result[CONFIG_DWH_SCHEMA] == "default"
 
     def test_unknown_db_type_passes_through(self):
         result = build_config_dict_from_db_params(db_type="mssql")
@@ -193,6 +198,15 @@ class TestBuildConfigDictFromDbParams:
             database="ch_db",
         )
         assert result[CONFIG_DWH_DIALECT] == "clickhouse"
+
+    def test_trino_catalog_maps_to_dwh_database_and_database_maps_to_schema(self):
+        result = build_config_dict_from_db_params(
+            db_type="trino",
+            catalog="hive",
+            database="college_exam",
+        )
+        assert result[CONFIG_DWH_DB] == "hive"
+        assert result[CONFIG_DWH_SCHEMA] == "college_exam"
 
 
 class TestBuildConfigDictFromDatusDatasource:
@@ -248,6 +262,35 @@ class TestBuildConfigDictFromDatusDatasource:
         assert result[CONFIG_DWH_SSLMODE] == "require"
         assert result[CONFIG_MODEL_PATH] == "/tmp/models"
 
+    def test_builds_config_from_runtime_trino_context(self):
+        result = build_config_dict_from_datus_datasource(
+            {
+                "type": "trino",
+                "host": "trino-host",
+                "port": 8080,
+                "username": "trino",
+                "catalog": "hive",
+                "database": "college_exam",
+            }
+        )
+
+        assert result[CONFIG_DWH_DIALECT] == "trino"
+        assert result[CONFIG_DWH_DB] == "hive"
+        assert result[CONFIG_DWH_SCHEMA] == "college_exam"
+
+    def test_builds_config_from_runtime_schema_alias(self):
+        result = build_config_dict_from_datus_datasource(
+            {
+                "type": "mysql",
+                "host": "mysql-host",
+                "database": "college_exam",
+                "db_schema": "semantic_schema",
+            }
+        )
+
+        assert result[CONFIG_DWH_DB] == "college_exam"
+        assert result[CONFIG_DWH_SCHEMA] == "semantic_schema"
+
 
 class TestDictConfigHandler:
     """Tests for DictConfigHandler."""
@@ -290,7 +333,7 @@ class TestDictConfigHandler:
         assert handler.get_value(CONFIG_DWH_USER) == "user1"
         assert handler.get_value(CONFIG_DWH_PASSWORD) == "pass1"
         assert handler.get_value(CONFIG_DWH_DB) == "testdb"
-        assert handler.get_value(CONFIG_DWH_SCHEMA) == "default"
+        assert handler.get_value(CONFIG_DWH_SCHEMA) == "testdb"
         assert handler.get_value(CONFIG_MODEL_PATH) == "/models"
 
 

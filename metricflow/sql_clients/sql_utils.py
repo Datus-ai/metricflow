@@ -15,6 +15,7 @@ from metricflow.configuration.constants import (
     CONFIG_DWH_PRIVATE_KEY_FILE,
     CONFIG_DWH_PRIVATE_KEY_FILE_PWD,
     CONFIG_DWH_ROLE,
+    CONFIG_DWH_SCHEMA,
     CONFIG_DWH_SSLMODE,
     CONFIG_DWH_USER,
     CONFIG_DWH_PASSWORD,
@@ -195,9 +196,11 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
         password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
         database = handler.get_value(CONFIG_DWH_DB) or ""
+        schema = handler.get_value(CONFIG_DWH_SCHEMA) or ""
 
         if database:
-            trino_url = f"trino://{username}@{host}:{port}/{database}"
+            trino_database = f"{database}/{schema}" if schema else database
+            trino_url = f"trino://{username}@{host}:{port}/{trino_database}"
         else:
             trino_url = f"trino://{username}@{host}:{port}"
         return TrinoSqlClient.from_connection_details(trino_url, password)

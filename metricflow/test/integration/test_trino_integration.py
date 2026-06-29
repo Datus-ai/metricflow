@@ -118,8 +118,25 @@ class TestTrinoClientFromConfig:
             assert "trino" in url
             assert "trino-host" in url
             assert "8090" in url
-            assert "memory" in url
+            assert "memory/default" in url
             assert password == ""
+
+    def test_make_sql_client_from_config_includes_trino_schema(self) -> None:
+        config_dict = build_config_dict_from_db_params(
+            db_type="trino",
+            host="trino-host",
+            port="8090",
+            username="trino",
+            password="",
+            database="memory",
+            schema="analytics",
+        )
+        handler = DictConfigHandler(config_dict)
+
+        with patch.object(TrinoSqlClient, "from_connection_details", return_value=MagicMock()) as mock_factory:
+            make_sql_client_from_config(handler)
+            url = mock_factory.call_args[0][0]
+            assert "memory/analytics" in url
 
 
 class TestTrinoSqlRendering:

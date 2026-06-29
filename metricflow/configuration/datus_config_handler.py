@@ -181,6 +181,8 @@ class DatusConfigHandler(YamlFileHandler):
             return self._resolve_env_vars(self.db_config.get("sslmode", ""))
 
         if key == CONFIG_DWH_DB:
+            database = self.db_config.get("database") or self.db_config.get("database_name", "")
+            catalog = self.db_config.get("catalog") or self.db_config.get("catalog_name", "")
             # Special handling for file-based databases
             if db_type in ("sqlite", "duckdb"):
                 uri = self._resolve_env_vars(self.db_config.get("uri", ""))
@@ -188,26 +190,30 @@ class DatusConfigHandler(YamlFileHandler):
                 if uri.startswith(f"{db_type}:///"):
                     uri = uri[len(f"{db_type}:///") :]
                 return os.path.expanduser(uri)
+            elif db_type == "trino":
+                return self._resolve_env_vars(catalog or database)
             else:
-                return self._resolve_env_vars(self.db_config.get("database", ""))
+                return self._resolve_env_vars(database)
 
         if key == CONFIG_DWH_SCHEMA:
             # Support both "schema" and "schema_name" field names for compatibility
-            schema = self.db_config.get("schema") or self.db_config.get("schema_name")
+            schema = (
+                self.db_config.get("schema") or self.db_config.get("db_schema") or self.db_config.get("schema_name")
+            )
+            database = self.db_config.get("database") or self.db_config.get("database_name", "")
+            catalog = self.db_config.get("catalog") or self.db_config.get("catalog_name", "")
             if schema:
                 return self._resolve_env_vars(schema)
             # Default schemas for different DB types
             if db_type == "duckdb":
                 return "main"
-            elif db_type in ("sqlite", "mysql"):
+            elif db_type == "sqlite":
                 return "default"
-            elif db_type == "starrocks":
-                # For StarRocks, use database as schema since it doesn't have schema concept
-                return self._resolve_env_vars(self.db_config.get("database", ""))
-            elif db_type == "clickhouse":
-                # For ClickHouse, schema == database
-                return self._resolve_env_vars(self.db_config.get("database", ""))
+            elif db_type in ("mysql", "starrocks", "clickhouse"):
+                return self._resolve_env_vars(database)
             elif db_type == "trino":
+                if catalog and database:
+                    return self._resolve_env_vars(database)
                 return "default"
             elif db_type in ("postgres", "postgresql", "greenplum"):
                 return "public"

@@ -1,9 +1,8 @@
-"""Schema-validator tests for the locked_metadata.uid field.
+"""Schema-validator tests for the Semantic Hub locked_metadata fields.
 
-uid is the stable node identity assigned by the Semantic Hub; it is written into
-both metric and data_source YAML, so the validators must accept it (and the
-data_source spec must accept a locked_metadata block at all) while still
-rejecting genuinely unknown keys.
+uid/owner/status are stamped by the Semantic Hub into metric and data_source YAML,
+so the validators must accept them (and the data_source spec must accept a
+locked_metadata block at all) while still rejecting genuinely unknown keys.
 """
 
 import pytest
@@ -21,7 +20,12 @@ def test_metric_locked_metadata_accepts_uid() -> None:
             "name": "bookings",
             "type": "measure_proxy",
             "type_params": {"measures": ["bookings"]},
-            "locked_metadata": {"uid": "01HZX9Q2K7", "owner": "arno@datus.ai", "tags": ["t"]},
+            "locked_metadata": {
+                "uid": "01HZX9Q2K7",
+                "owner": "arno@datus.ai",
+                "status": "certified",
+                "tags": ["t"],
+            },
         }
     )
 

@@ -79,6 +79,8 @@ locked_metadata_schema = {
         "uid": {"type": "string"},
         # Node owner / creator.
         "owner": {"type": "string"},
+        # Certification status assigned by the Semantic Hub (e.g. certified/draft).
+        "status": {"type": "string"},
     },
     "additionalProperties": False,
 }

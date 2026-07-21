@@ -142,6 +142,16 @@ MF_STARROCKS_KEYS = (
     ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.STARROCKS.value),
 )
 
+# Doris config keys
+MF_DORIS_KEYS = (
+    ConfigKey(key=CONFIG_DWH_DB),
+    ConfigKey(key=CONFIG_DWH_PASSWORD, comment="Password associated with the provided user (can be empty)"),
+    ConfigKey(key=CONFIG_DWH_USER, comment="Username for the data warehouse"),
+    ConfigKey(key=CONFIG_DWH_PORT),
+    ConfigKey(key=CONFIG_DWH_HOST, comment="Host name"),
+    ConfigKey(key=CONFIG_DWH_DIALECT, value=SqlDialect.DORIS.value),
+)
+
 # Trino config keys
 MF_TRINO_KEYS = (
     ConfigKey(key=CONFIG_DWH_DB, comment="Catalog name"),

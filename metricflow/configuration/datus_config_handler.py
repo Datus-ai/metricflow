@@ -154,6 +154,7 @@ class DatusConfigHandler(YamlFileHandler):
                 "greenplum": "greenplum",
                 "mysql": "mysql",
                 "starrocks": "starrocks",
+                "doris": "doris",
                 "clickhouse": "clickhouse",
                 "trino": "trino",
                 "duckdb": "duckdb",
@@ -209,7 +210,7 @@ class DatusConfigHandler(YamlFileHandler):
                 return "main"
             elif db_type == "sqlite":
                 return "default"
-            elif db_type in ("mysql", "starrocks", "clickhouse"):
+            elif db_type in ("mysql", "starrocks", "doris", "clickhouse"):
                 return self._resolve_env_vars(database)
             elif db_type == "trino":
                 if catalog and database:

@@ -30,6 +30,7 @@ DIALECT_MAPPING = {
     "greenplum": "greenplum",
     "mysql": "mysql",
     "starrocks": "starrocks",
+    "doris": "doris",
     "clickhouse": "clickhouse",
     "trino": "trino",
     "duckdb": "duckdb",
@@ -48,7 +49,7 @@ DEFAULT_SCHEMA_MAPPING = {
     "greenplum": "public",
 }
 
-SCHEMA_EQUALS_DATABASE_TYPES = {"mysql", "starrocks", "clickhouse"}
+SCHEMA_EQUALS_DATABASE_TYPES = {"mysql", "starrocks", "doris", "clickhouse"}
 
 
 def build_config_dict_from_db_params(

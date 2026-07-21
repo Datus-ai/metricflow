@@ -58,6 +58,18 @@ class TestBuildConfigDictFromDbParams:
         assert result[CONFIG_DWH_DIALECT] == "starrocks"
         assert result[CONFIG_DWH_SCHEMA] == "sr_db"
 
+    def test_doris(self):
+        result = build_config_dict_from_db_params(
+            db_type="doris",
+            host="doris-host",
+            port="9030",
+            username="root",
+            password="pw",
+            database="doris_db",
+        )
+        assert result[CONFIG_DWH_DIALECT] == "doris"
+        assert result[CONFIG_DWH_SCHEMA] == "doris_db"
+
     def test_postgresql(self):
         result = build_config_dict_from_db_params(
             db_type="postgresql",
@@ -349,6 +361,10 @@ agent:
         type: starrocks
         host: sr-host
         database_name: runtime_db
+      doris:
+        type: doris
+        host: doris-host
+        database_name: doris_db
       trino:
         type: trino
         host: trino-host
@@ -361,6 +377,11 @@ agent:
         starrocks_handler = DatusConfigHandler("starrocks", config_path=str(config_path))
         assert starrocks_handler.get_value(CONFIG_DWH_DB) == "runtime_db"
         assert starrocks_handler.get_value(CONFIG_DWH_SCHEMA) == "runtime_db"
+
+        doris_handler = DatusConfigHandler("doris", config_path=str(config_path))
+        assert doris_handler.get_value(CONFIG_DWH_DIALECT) == "doris"
+        assert doris_handler.get_value(CONFIG_DWH_DB) == "doris_db"
+        assert doris_handler.get_value(CONFIG_DWH_SCHEMA) == "doris_db"
 
         trino_handler = DatusConfigHandler("trino", config_path=str(config_path))
         assert trino_handler.get_value(CONFIG_DWH_DB) == "tpch"

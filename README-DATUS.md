@@ -39,6 +39,9 @@ mf setup
 mf --datasource starrocks list-metrics
 mf --datasource starrocks query --metrics revenue --dimensions metric_time
 mf --datasource starrocks health-checks
+mf --datasource doris list-metrics
+mf --datasource doris query --metrics revenue --dimensions metric_time
+mf --datasource doris health-checks
 ```
 
 ### Traditional Mode (reads from ~/.metricflow/config.yml)
@@ -154,6 +157,7 @@ For detailed MCP server documentation, see [MCP-SERVER.md](MCP-SERVER.md).
 | SQLite | ✅ Full | File-based |
 | MySQL | ✅ Full | Network database |
 | StarRocks | ✅ Full | Uses MySQL protocol |
+| Apache Doris | ✅ Full | Uses MySQL protocol |
 | PostgreSQL | ⚠️ Config only | Client not in this build |
 | Snowflake | ✅ Full | Password or RSA key pair auth; requires Snowflake dependencies |
 | BigQuery | ⚠️ Config only | Client not in this build |

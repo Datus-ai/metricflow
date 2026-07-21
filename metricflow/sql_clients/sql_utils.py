@@ -28,6 +28,7 @@ from metricflow.protocols.sql_request import SqlJsonTag
 from metricflow.sql.sql_bind_parameters import SqlBindParameters
 from metricflow.sql_clients.base_sql_client_implementation import SqlClientException
 from metricflow.sql_clients.clickhouse import ClickHouseSqlClient
+from metricflow.sql_clients.doris import DorisSqlClient
 from metricflow.sql_clients.common_client import SqlDialect, not_empty
 from metricflow.sql_clients.duckdb import DuckDbSqlClient
 from metricflow.sql_clients.greenplum import GreenplumSqlClient
@@ -88,6 +89,8 @@ def make_sql_client(url: str, password: str) -> AsyncSqlClient:
         return ClickHouseSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.STARROCKS:
         return StarRocksSqlClient.from_connection_details(url, password)
+    elif dialect == SqlDialect.DORIS:
+        return DorisSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.TRINO:
         return TrinoSqlClient.from_connection_details(url, password)
     elif dialect == SqlDialect.SQLITE:
@@ -96,7 +99,7 @@ def make_sql_client(url: str, password: str) -> AsyncSqlClient:
         return SnowflakeSqlClient.from_connection_details(url, password)
     else:
         raise ValueError(
-            "Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, SQLite, and Snowflake "
+            "Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Doris, Trino, SQLite, and Snowflake "
             f"dialects are supported in this build. Got: `{dialect}` in URL {url}"
         )
 
@@ -190,6 +193,18 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         else:
             starrocks_url = f"starrocks://{username}@{host}:{port}"
         return StarRocksSqlClient.from_connection_details(starrocks_url, password)
+    elif dialect == SqlDialect.DORIS.value:
+        host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
+        port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
+        username = not_empty(handler.get_value(CONFIG_DWH_USER), "username", url)
+        password = handler.get_value(CONFIG_DWH_PASSWORD) or ""
+        database = handler.get_value(CONFIG_DWH_DB) or ""
+
+        if database:
+            doris_url = f"doris://{username}@{host}:{port}/{database}"
+        else:
+            doris_url = f"doris://{username}@{host}:{port}"
+        return DorisSqlClient.from_connection_details(doris_url, password)
     elif dialect == SqlDialect.TRINO.value:
         host = not_empty(handler.get_value(CONFIG_DWH_HOST), "host", url)
         port = not_empty(handler.get_value(CONFIG_DWH_PORT), "port", url)
@@ -222,7 +237,7 @@ def make_sql_client_from_config(handler: YamlFileHandler) -> AsyncSqlClient:
         )
     else:
         raise ValueError(
-            "Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Trino, SQLite, and Snowflake "
+            "Only DuckDB, MySQL, PostgreSQL, Greenplum, ClickHouse, StarRocks, Doris, Trino, SQLite, and Snowflake "
             f"dialects are supported in this build. Got dialect '{dialect}' in {url}"
         )
 

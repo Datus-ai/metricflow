@@ -18,6 +18,7 @@ class SqlDialect(ExtendedEnum):
     GREENPLUM = "greenplum"
     CLICKHOUSE = "clickhouse"
     STARROCKS = "starrocks"
+    DORIS = "doris"
     TRINO = "trino"
 
 

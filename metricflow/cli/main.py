@@ -36,6 +36,7 @@ from metricflow.cli.utils import (
     MF_SNOWFLAKE_KEYS,
     MF_POSTGRESQL_KEYS,
     MF_DATABRICKS_KEYS,
+    MF_DORIS_KEYS,
     MF_STARROCKS_KEYS,
     MF_TRINO_KEYS,
 )
@@ -186,6 +187,7 @@ def setup(cfg: CLIContext, restart: bool, datasource: Optional[str]) -> None:
             SqlDialect.GREENPLUM.value: MF_GREENPLUM_KEYS,
             SqlDialect.CLICKHOUSE.value: MF_CLICKHOUSE_KEYS,
             SqlDialect.STARROCKS.value: MF_STARROCKS_KEYS,
+            SqlDialect.DORIS.value: MF_DORIS_KEYS,
             SqlDialect.TRINO.value: MF_TRINO_KEYS,
             SqlDialect.DUCKDB.value: generate_duckdb_demo_keys(config_dir=cfg.config.dir_path),
             SqlDialect.DATABRICKS.value: MF_DATABRICKS_KEYS,

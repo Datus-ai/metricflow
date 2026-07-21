@@ -1,4 +1,5 @@
 from metricflow.sql_clients.clickhouse import ClickHouseSqlClient
+from metricflow.sql_clients.doris import DorisSqlClient
 from metricflow.sql_clients.duckdb import DuckDbSqlClient
 from metricflow.sql_clients.greenplum import GreenplumSqlClient
 from metricflow.sql_clients.mysql import MySQLSqlClient
@@ -9,6 +10,7 @@ from metricflow.sql_clients.trino import TrinoSqlClient
 
 __all__ = [
     "ClickHouseSqlClient",
+    "DorisSqlClient",
     "DuckDbSqlClient",
     "GreenplumSqlClient",
     "MySQLSqlClient",

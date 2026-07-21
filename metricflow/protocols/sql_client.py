@@ -24,6 +24,7 @@ class SqlEngine(Enum):
     GREENPLUM = "Greenplum"
     CLICKHOUSE = "ClickHouse"
     STARROCKS = "StarRocks"
+    DORIS = "Doris"
     TRINO = "Trino"
 
     # Not yet supported.

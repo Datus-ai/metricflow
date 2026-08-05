@@ -24,6 +24,7 @@ from metricflow.configuration.constants import (
     CONFIG_EMAIL,
     CONFIG_DWH_SSLMODE,
 )
+from metricflow.configuration.dict_config_handler import DIALECT_MAPPING
 from metricflow.configuration.yaml_handler import YamlFileHandler
 
 
@@ -147,21 +148,7 @@ class DatusConfigHandler(YamlFileHandler):
 
         # Map database dialect
         if key == CONFIG_DWH_DIALECT:
-            # Map Datus DB types to MetricFlow dialects
-            dialect_mapping = {
-                "postgres": "postgresql",
-                "postgresql": "postgresql",
-                "greenplum": "greenplum",
-                "mysql": "mysql",
-                "starrocks": "starrocks",
-                "clickhouse": "clickhouse",
-                "trino": "trino",
-                "duckdb": "duckdb",
-                "sqlite": "sqlite",
-                "snowflake": "snowflake",
-                "bigquery": "bigquery",
-            }
-            return dialect_mapping.get(db_type, db_type)
+            return DIALECT_MAPPING.get(db_type, db_type)
 
         # Common mappings for most SQL databases
         if key == CONFIG_DWH_HOST:
@@ -215,7 +202,7 @@ class DatusConfigHandler(YamlFileHandler):
                 if catalog and database:
                     return self._resolve_env_vars(database)
                 return "default"
-            elif db_type in ("postgres", "postgresql", "greenplum"):
+            elif db_type in ("postgres", "postgresql", "hologres", "greenplum"):
                 return "public"
             else:
                 return self._resolve_env_vars(self.db_config.get("schema") or self.db_config.get("schema_name") or "")

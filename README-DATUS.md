@@ -154,7 +154,8 @@ For detailed MCP server documentation, see [MCP-SERVER.md](MCP-SERVER.md).
 | SQLite | ✅ Full | File-based |
 | MySQL | ✅ Full | Network database |
 | StarRocks | ✅ Full | Uses MySQL protocol |
-| PostgreSQL | ⚠️ Config only | Client not in this build |
+| PostgreSQL | ✅ Full | Network database |
+| Hologres | ✅ Full | Keep `type: hologres`; executes through the PostgreSQL client |
 | Snowflake | ✅ Full | Password or RSA key pair auth; requires Snowflake dependencies |
 | BigQuery | ⚠️ Config only | Client not in this build |
 

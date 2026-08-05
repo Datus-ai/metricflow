@@ -23,10 +23,14 @@ from metricflow.configuration.constants import (
 )
 from metricflow.configuration.yaml_handler import YamlFileHandler
 
-# Mapping from Datus DB types to MetricFlow dialect names
+# Mapping from Datus DB types to MetricFlow dialect names.
+# Hologres speaks the PostgreSQL wire protocol and has no MetricFlow dialect of
+# its own, so it executes through the PostgreSQL client. Datus configs keep
+# `type: hologres` so the Hologres datasource adapter stays in effect.
 DIALECT_MAPPING = {
     "postgres": "postgresql",
     "postgresql": "postgresql",
+    "hologres": "postgresql",
     "greenplum": "greenplum",
     "mysql": "mysql",
     "starrocks": "starrocks",
@@ -45,6 +49,7 @@ DEFAULT_SCHEMA_MAPPING = {
     "mysql": "default",
     "postgres": "public",
     "postgresql": "public",
+    "hologres": "public",
     "greenplum": "public",
 }
 

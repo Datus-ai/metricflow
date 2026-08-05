@@ -77,6 +77,39 @@ class TestBuildConfigDictFromDbParams:
         assert result[CONFIG_DWH_DIALECT] == "postgresql"
         assert result[CONFIG_DWH_SCHEMA] == "public"
 
+    def test_hologres_maps_to_postgresql_dialect(self):
+        result = build_config_dict_from_db_params(
+            db_type="hologres",
+            host="holo-host",
+            port="80",
+            username="holo_user",
+            password="holo_pw",
+            database="holo_db",
+            sslmode="require",
+        )
+        assert result[CONFIG_DWH_DIALECT] == "postgresql"
+        assert result[CONFIG_DWH_HOST] == "holo-host"
+        assert result[CONFIG_DWH_PORT] == "80"
+        assert result[CONFIG_DWH_USER] == "holo_user"
+        assert result[CONFIG_DWH_PASSWORD] == "holo_pw"
+        assert result[CONFIG_DWH_DB] == "holo_db"
+        assert result[CONFIG_DWH_SSLMODE] == "require"
+        assert result[CONFIG_DWH_SCHEMA] == "public"
+
+    def test_hologres_explicit_schema_overrides_default(self):
+        result = build_config_dict_from_db_params(
+            db_type="hologres",
+            database="holo_db",
+            schema="njyh",
+        )
+        assert result[CONFIG_DWH_DIALECT] == "postgresql"
+        assert result[CONFIG_DWH_SCHEMA] == "njyh"
+
+    def test_hologres_db_type_is_case_insensitive(self):
+        result = build_config_dict_from_db_params(db_type="Hologres")
+        assert result[CONFIG_DWH_DIALECT] == "postgresql"
+        assert result[CONFIG_DWH_SCHEMA] == "public"
+
     def test_duckdb_with_uri(self):
         result = build_config_dict_from_db_params(
             db_type="duckdb",
@@ -262,6 +295,31 @@ class TestBuildConfigDictFromDatusDatasource:
         assert result[CONFIG_DWH_SSLMODE] == "require"
         assert result[CONFIG_MODEL_PATH] == "/tmp/models"
 
+    def test_builds_config_from_raw_hologres_datasource(self):
+        result = build_config_dict_from_datus_datasource(
+            {
+                "type": "hologres",
+                "host": "holo-host",
+                "port": 80,
+                "username": "holo_user",
+                "password": "secret",
+                "database": "njyh",
+                "schema_name": "public_data",
+                "sslmode": "require",
+            },
+            model_path="/tmp/models",
+        )
+
+        assert result[CONFIG_DWH_DIALECT] == "postgresql"
+        assert result[CONFIG_DWH_HOST] == "holo-host"
+        assert result[CONFIG_DWH_PORT] == "80"
+        assert result[CONFIG_DWH_USER] == "holo_user"
+        assert result[CONFIG_DWH_PASSWORD] == "secret"
+        assert result[CONFIG_DWH_DB] == "njyh"
+        assert result[CONFIG_DWH_SCHEMA] == "public_data"
+        assert result[CONFIG_DWH_SSLMODE] == "require"
+        assert result[CONFIG_MODEL_PATH] == "/tmp/models"
+
     def test_builds_config_from_runtime_trino_context(self):
         result = build_config_dict_from_datus_datasource(
             {
@@ -365,6 +423,40 @@ agent:
         trino_handler = DatusConfigHandler("trino", config_path=str(config_path))
         assert trino_handler.get_value(CONFIG_DWH_DB) == "tpch"
         assert trino_handler.get_value(CONFIG_DWH_SCHEMA) == "tiny"
+
+    def test_get_value_maps_hologres_to_postgresql_dialect(self, tmp_path):
+        config_path = tmp_path / "agent.yml"
+        config_path.write_text(
+            """
+agent:
+  services:
+    datasources:
+      hologres:
+        type: hologres
+        host: holo-host
+        port: 80
+        username: holo_user
+        password: secret
+        database: njyh
+        sslmode: require
+""",
+            encoding="utf-8",
+        )
+
+        handler = DatusConfigHandler(
+            datasource="hologres",
+            config_path=str(config_path),
+            project_root=str(tmp_path),
+        )
+
+        assert handler.get_value(CONFIG_DWH_DIALECT) == "postgresql"
+        assert handler.get_value(CONFIG_DWH_HOST) == "holo-host"
+        assert handler.get_value(CONFIG_DWH_PORT) == "80"
+        assert handler.get_value(CONFIG_DWH_USER) == "holo_user"
+        assert handler.get_value(CONFIG_DWH_PASSWORD) == "secret"
+        assert handler.get_value(CONFIG_DWH_DB) == "njyh"
+        assert handler.get_value(CONFIG_DWH_SCHEMA) == "public"
+        assert handler.get_value(CONFIG_DWH_SSLMODE) == "require"
 
     def test_get_value_returns_sslmode_from_datasource_config(self, tmp_path):
         config_path = tmp_path / "agent.yml"

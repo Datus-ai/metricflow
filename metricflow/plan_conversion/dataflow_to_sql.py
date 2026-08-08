@@ -99,7 +99,6 @@ from metricflow.sql.sql_plan import (
     SqlOrderByDescription,
     SqlJoinType,
     SqlQueryPlanNode,
-    SqlTableFromClauseNode,
 )
 from metricflow.time.time_constants import ISO8601_PYTHON_FORMAT
 
@@ -193,7 +192,8 @@ class DataflowToSqlQueryPlanConverter(Generic[SqlDataSetT], DataflowPlanNodeVisi
             time_dimension_instances=time_spine_instance,
         )
         description = "Date Spine"
-        time_spine_table_alias = self._next_unique_table_alias()
+        time_spine_source_alias = self._next_unique_table_alias()
+        time_spine_from_source = time_spine_source.make_source(time_range_constraint)
 
         # If the requested granularity is the same as the granularity of the spine, do a direct select.
         if metric_time_dimension_instance.spec.time_granularity == time_spine_source.time_column_granularity:
@@ -206,20 +206,20 @@ class DataflowToSqlQueryPlanConverter(Generic[SqlDataSetT], DataflowPlanNodeVisi
                         SqlSelectColumn(
                             expr=SqlColumnReferenceExpression(
                                 SqlColumnReference(
-                                    table_alias=time_spine_table_alias,
+                                    table_alias=time_spine_source_alias,
                                     column_name=time_spine_source.time_column_name,
                                 ),
                             ),
                             column_alias=metric_time_dimension_column_name,
                         ),
                     ),
-                    from_source=SqlTableFromClauseNode(sql_table=time_spine_source.spine_table),
-                    from_source_alias=time_spine_table_alias,
+                    from_source=time_spine_from_source,
+                    from_source_alias=time_spine_source_alias,
                     joins_descs=(),
                     group_bys=(),
                     where=(
                         _make_time_range_comparison_expr(
-                            table_alias=time_spine_table_alias,
+                            table_alias=time_spine_source_alias,
                             column_alias=time_spine_source.time_column_name,
                             time_range_constraint=time_range_constraint,
                         )
@@ -237,7 +237,7 @@ class DataflowToSqlQueryPlanConverter(Generic[SqlDataSetT], DataflowPlanNodeVisi
                         time_granularity=metric_time_dimension_instance.spec.time_granularity,
                         arg=SqlColumnReferenceExpression(
                             SqlColumnReference(
-                                table_alias=time_spine_table_alias,
+                                table_alias=time_spine_source_alias,
                                 column_name=time_spine_source.time_column_name,
                             ),
                         ),
@@ -251,13 +251,13 @@ class DataflowToSqlQueryPlanConverter(Generic[SqlDataSetT], DataflowPlanNodeVisi
                     description=description,
                     # This creates select expressions for all columns referenced in the instance set.
                     select_columns=select_columns,
-                    from_source=SqlTableFromClauseNode(sql_table=time_spine_source.spine_table),
-                    from_source_alias=time_spine_table_alias,
+                    from_source=time_spine_from_source,
+                    from_source_alias=time_spine_source_alias,
                     joins_descs=(),
                     group_bys=select_columns,
                     where=(
                         _make_time_range_comparison_expr(
-                            table_alias=time_spine_table_alias,
+                            table_alias=time_spine_source_alias,
                             column_alias=time_spine_source.time_column_name,
                             time_range_constraint=time_range_constraint,
                         )

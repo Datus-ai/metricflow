@@ -7,7 +7,10 @@ FROM (
   -- Date Spine
   SELECT
     subq_6.ds AS metric_time
-  FROM ***************************.mf_time_spine subq_6
+  FROM (
+    SELECT DATEADD(day, ROW_NUMBER() OVER (ORDER BY SEQ4()) - 1, TO_TIMESTAMP_NTZ('2020-01-01 00:00:00')) AS ds
+    FROM TABLE(GENERATOR(ROWCOUNT => 367))
+  ) subq_6
   WHERE subq_6.ds BETWEEN CAST('2020-01-01' AS TIMESTAMP) AND CAST('2021-01-01' AS TIMESTAMP)
 ) subq_5
 INNER JOIN (

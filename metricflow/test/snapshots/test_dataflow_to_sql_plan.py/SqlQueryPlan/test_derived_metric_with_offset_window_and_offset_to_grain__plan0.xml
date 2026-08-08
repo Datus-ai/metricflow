@@ -61,13 +61,12 @@
                     <!--   {'class': 'SqlSelectColumn',                            -->
                     <!--    'expr': SqlColumnReferenceExpression(node_id=cr_291),  -->
                     <!--    'column_alias': 'metric_time'}                         -->
-                    <!-- from_source = SqlTableFromClauseNode(node_id=tfc_0) -->
+                    <!-- from_source = SqlSelectQueryFromClauseNode(node_id=tfc_0) -->
                     <!-- where = None -->
-                    <SqlTableFromClauseNode>
-                        <!-- description = Read from ***************************.mf_time_spine -->
+                    <SqlSelectQueryFromClauseNode>
+                        <!-- description = Read From a Select Query -->
                         <!-- node_id = tfc_0 -->
-                        <!-- table_id = ***************************.mf_time_spine -->
-                    </SqlTableFromClauseNode>
+                    </SqlSelectQueryFromClauseNode>
                 </SqlSelectStatementNode>
                 <SqlSelectStatementNode>
                     <!-- description = Compute Metrics via Expressions -->
@@ -600,13 +599,12 @@
                     <!--   {'class': 'SqlSelectColumn',                            -->
                     <!--    'expr': SqlColumnReferenceExpression(node_id=cr_359),  -->
                     <!--    'column_alias': 'metric_time'}                         -->
-                    <!-- from_source = SqlTableFromClauseNode(node_id=tfc_1) -->
+                    <!-- from_source = SqlSelectQueryFromClauseNode(node_id=tfc_1) -->
                     <!-- where = None -->
-                    <SqlTableFromClauseNode>
-                        <!-- description = Read from ***************************.mf_time_spine -->
+                    <SqlSelectQueryFromClauseNode>
+                        <!-- description = Read From a Select Query -->
                         <!-- node_id = tfc_1 -->
-                        <!-- table_id = ***************************.mf_time_spine -->
-                    </SqlTableFromClauseNode>
+                    </SqlSelectQueryFromClauseNode>
                 </SqlSelectStatementNode>
                 <SqlSelectStatementNode>
                     <!-- description = Compute Metrics via Expressions -->

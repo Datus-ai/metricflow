@@ -57,10 +57,10 @@ class QueryRenderingTools:
     time_spine_source: TimeSpineSource
     plan_converter: DataflowToSqlQueryPlanConverter
 
-    def __init__(self, model: UserConfiguredModel, system_schema: str) -> None:  # noqa: D
+    def __init__(self, model: UserConfiguredModel, sql_client: SqlClient) -> None:  # noqa: D
         self.semantic_model = SemanticModel(user_configured_model=model)
         self.source_node_builder = SourceNodeBuilder(semantic_model=self.semantic_model)
-        self.time_spine_source = TimeSpineSource(schema_name=system_schema)
+        self.time_spine_source = TimeSpineSource(sql_engine=sql_client.sql_engine_attributes.sql_engine_type)
         self.converter = DataSourceToDataSetConverter(
             column_association_resolver=DefaultColumnAssociationResolver(semantic_model=self.semantic_model)
         )
@@ -144,7 +144,7 @@ class DataWarehouseTaskBuilder:
                 Dimension(name=f"validation_dim_for_{data_source.name}", type=DimensionType.CATEGORICAL, expr="1")
             ]
 
-        render_tools = QueryRenderingTools(model=model, system_schema=system_schema)
+        render_tools = QueryRenderingTools(model=model, sql_client=sql_client)
 
         tasks: List[DataWarehouseValidationTask] = []
         for data_source in model.data_sources:
@@ -186,7 +186,7 @@ class DataWarehouseTaskBuilder:
         on the data source to identify which have issues.
         """
 
-        render_tools = QueryRenderingTools(model=model, system_schema=system_schema)
+        render_tools = QueryRenderingTools(model=model, sql_client=sql_client)
 
         tasks: List[DataWarehouseValidationTask] = []
         for data_source in model.data_sources:
@@ -286,7 +286,7 @@ class DataWarehouseTaskBuilder:
         on the data source to identify which have issues.
         """
 
-        render_tools = QueryRenderingTools(model=model, system_schema=system_schema)
+        render_tools = QueryRenderingTools(model=model, sql_client=sql_client)
 
         tasks: List[DataWarehouseValidationTask] = []
         for data_source in model.data_sources:
@@ -361,7 +361,7 @@ class DataWarehouseTaskBuilder:
         on the data source to identify which have issues.
         """
 
-        render_tools = QueryRenderingTools(model=model, system_schema=system_schema)
+        render_tools = QueryRenderingTools(model=model, sql_client=sql_client)
 
         tasks: List[DataWarehouseValidationTask] = []
         for data_source in model.data_sources:

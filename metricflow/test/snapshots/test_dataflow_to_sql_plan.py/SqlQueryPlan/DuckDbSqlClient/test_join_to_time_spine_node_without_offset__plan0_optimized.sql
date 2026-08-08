@@ -7,7 +7,14 @@ FROM (
   -- Date Spine
   SELECT
     ds AS metric_time
-  FROM ***************************.mf_time_spine subq_13
+  FROM (
+    SELECT ds
+    FROM GENERATE_SERIES(
+      CAST('2020-01-01 00:00:00' AS TIMESTAMP),
+      CAST('2021-01-01 00:00:00' AS TIMESTAMP),
+      INTERVAL '1 day'
+    ) AS time_spine(ds)
+  ) subq_13
   WHERE ds BETWEEN CAST('2020-01-01' AS TIMESTAMP) AND CAST('2021-01-01' AS TIMESTAMP)
 ) subq_12
 INNER JOIN (

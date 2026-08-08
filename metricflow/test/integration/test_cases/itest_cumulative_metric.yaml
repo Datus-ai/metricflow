@@ -14,7 +14,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2020-01-05", "2021-01-04") }}
     ) a
     INNER JOIN (
@@ -43,7 +43,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2020-01-05", "2021-01-04") }}
     ) a
     INNER JOIN (
@@ -74,7 +74,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2020-01-01", "2021-01-05") }}
     ) a
     INNER JOIN (
@@ -118,7 +118,7 @@ integration_test:
                 , a.ds AS ds
             FROM (
               SELECT ds
-              FROM {{ mf_time_spine_source }}
+              FROM {{ dynamic_time_spine_source }} AS time_spine
               WHERE {{ render_time_constraint("ds", "2019-12-31", "2021-01-05") }}
             ) a
             INNER JOIN (
@@ -137,7 +137,7 @@ integration_test:
           , a.ds
         FROM (
           SELECT ds
-          FROM {{ mf_time_spine_source }}
+          FROM {{ dynamic_time_spine_source }} AS time_spine
           WHERE {{ render_time_constraint("ds", "2019-12-31", "2021-01-05") }}
         ) a
         INNER JOIN (
@@ -167,7 +167,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2020-01-05", "2021-01-04") }}
     ) a
     INNER JOIN (
@@ -194,7 +194,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2021-01-05", "2021-01-05") }}
     ) a
     INNER JOIN (
@@ -221,7 +221,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2019-12-31", "2020-01-04") }}
     ) a
     INNER JOIN (
@@ -248,7 +248,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2020-01-04", "2020-01-04") }}
     ) a
     INNER JOIN (
@@ -276,7 +276,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2020-01-01", "2021-01-05") }}
     ) a
     INNER JOIN (
@@ -303,7 +303,7 @@ integration_test:
       , a.ds AS metric_time
     FROM (
       SELECT ds
-      FROM {{ mf_time_spine_source }}
+      FROM {{ dynamic_time_spine_source }} AS time_spine
       WHERE {{ render_time_constraint("ds", "2020-01-01", "2021-01-05") }}
     ) a
     INNER JOIN (

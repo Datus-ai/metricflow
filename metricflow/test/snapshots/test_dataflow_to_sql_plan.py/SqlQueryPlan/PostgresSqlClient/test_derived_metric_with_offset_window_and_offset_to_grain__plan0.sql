@@ -17,7 +17,14 @@ FROM (
       -- Date Spine
       SELECT
         subq_6.ds AS metric_time
-      FROM ***************************.mf_time_spine subq_6
+      FROM (
+        SELECT ds
+        FROM GENERATE_SERIES(
+          CAST('2020-01-01 00:00:00' AS TIMESTAMP),
+          CAST('2020-12-31 00:00:00' AS TIMESTAMP),
+          INTERVAL '1 day'
+        ) AS time_spine(ds)
+      ) subq_6
     ) subq_5
     INNER JOIN (
       -- Compute Metrics via Expressions
@@ -174,7 +181,14 @@ FROM (
       -- Date Spine
       SELECT
         subq_14.ds AS metric_time
-      FROM ***************************.mf_time_spine subq_14
+      FROM (
+        SELECT ds
+        FROM GENERATE_SERIES(
+          CAST('2020-01-01 00:00:00' AS TIMESTAMP),
+          CAST('2020-12-31 00:00:00' AS TIMESTAMP),
+          INTERVAL '1 day'
+        ) AS time_spine(ds)
+      ) subq_14
     ) subq_13
     INNER JOIN (
       -- Compute Metrics via Expressions

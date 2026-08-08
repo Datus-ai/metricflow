@@ -6,6 +6,7 @@ Tests the full flow: config -> client creation -> SQL rendering -> query executi
   Uses Docker env from datus-starrocks: localhost:9030, root/(empty password).
 """
 
+import datetime
 import os
 import shutil
 import tempfile
@@ -30,8 +31,10 @@ from metricflow.configuration.dict_config_handler import (
     DIALECT_MAPPING,
 )
 from metricflow.engine.metricflow_engine import MetricFlowQueryRequest
+from metricflow.constraints.time_constraint import TimeRangeConstraint
+from metricflow.plan_conversion.time_spine import TimeSpineSource
 from metricflow.protocols.sql_client import SqlEngine
-from metricflow.sql.render.starrocks import StarRocksSqlQueryPlanRenderer
+from metricflow.sql.render.starrocks import StarRocksSqlExpressionRenderer, StarRocksSqlQueryPlanRenderer
 from metricflow.sql_clients.common_client import SqlDialect
 from metricflow.sql_clients.starrocks import StarRocksEngineAttributes, StarRocksSqlClient
 from metricflow.sql_clients.sql_utils import make_sql_client_from_config
@@ -161,6 +164,48 @@ class TestStarRocksSqlRendering:
         renderer = StarRocksEngineAttributes.sql_query_plan_renderer
         assert isinstance(renderer, StarRocksSqlQueryPlanRenderer)
 
+    @pytest.mark.parametrize("granularity", ("day", "week", "month", "quarter", "year"))
+    def test_renderer_uses_native_date_trunc(self, granularity: str) -> None:
+        from metricflow.sql.sql_exprs import SqlDateTruncExpression, SqlStringExpression
+        from metricflow.time.time_granularity import TimeGranularity
+
+        rendered = StarRocksSqlExpressionRenderer().render_sql_expr(
+            SqlDateTruncExpression(
+                time_granularity=TimeGranularity(granularity),
+                arg=SqlStringExpression("event_time", requires_parenthesis=False),
+            )
+        )
+
+        assert rendered.sql == f"DATE_TRUNC('{granularity}', event_time)"
+
+    @pytest.mark.parametrize(
+        ("function_type", "expected_function"),
+        (
+            ("CONTINUOUS", "PERCENTILE_CONT"),
+            ("DISCRETE", "PERCENTILE_DISC"),
+            ("APPROXIMATE_CONTINUOUS", "PERCENTILE_APPROX"),
+        ),
+    )
+    def test_renderer_uses_native_percentile_syntax(self, function_type: str, expected_function: str) -> None:
+        from metricflow.sql.sql_exprs import (
+            SqlPercentileExpression,
+            SqlPercentileExpressionArgument,
+            SqlPercentileFunctionType,
+            SqlStringExpression,
+        )
+
+        rendered = StarRocksSqlExpressionRenderer().render_sql_expr(
+            SqlPercentileExpression(
+                order_by_arg=SqlStringExpression("booking_value", requires_parenthesis=False),
+                percentile_args=SqlPercentileExpressionArgument(
+                    percentile=0.99,
+                    function_type=SqlPercentileFunctionType[function_type],
+                ),
+            )
+        )
+
+        assert rendered.sql == f"{expected_function}(booking_value, 0.99)"
+
 
 class TestStarRocksCliSetupDialect:
     """Tests that the CLI setup command includes starrocks in dialect choices."""
@@ -176,7 +221,8 @@ class TestStarRocksCliSetupDialect:
 # Uses Docker environment from datus-starrocks: localhost:9030, root/(empty)
 # ---------------------------------------------------------------------------
 
-SR_URL = "starrocks://root@localhost:9030/test"
+SR_QUERY_HOST_PORT = os.getenv("STARROCKS_QUERY_HOST_PORT", "9030")
+SR_URL = f"starrocks://root@localhost:{SR_QUERY_HOST_PORT}/test"
 SR_PASSWORD = ""
 
 
@@ -195,7 +241,7 @@ def sr_client():
     """Module-scoped fixture for a live StarRocks client."""
     client = _make_sr_client()
     if client is None:
-        pytest.skip("StarRocks Docker not available at localhost:9030")
+        pytest.skip(f"StarRocks Docker not available at localhost:{SR_QUERY_HOST_PORT}")
     yield client
     client.close()
 
@@ -214,6 +260,40 @@ class TestStarRocksLiveDatabase:
         df = sr_client.query("SELECT 1 AS val")
         assert len(df) == 1
 
+    def test_dynamic_time_spine(self, sr_client):
+        source = TimeSpineSource(sql_engine=SqlEngine.STARROCKS).make_source(
+            TimeRangeConstraint(
+                start_time=datetime.datetime(2020, 1, 1),
+                end_time=datetime.datetime(2020, 1, 10),
+            )
+        )
+
+        result = sr_client.query(
+            f"""\
+SELECT COUNT(*) AS point_count, MIN(ds) AS start_time, MAX(ds) AS end_time
+FROM (
+{source.select_query}
+) AS time_spine
+"""
+        )
+
+        assert result.loc[0, "point_count"] == 10
+        assert result.loc[0, "start_time"] == datetime.datetime(2020, 1, 1)
+        assert result.loc[0, "end_time"] == datetime.datetime(2020, 1, 10)
+
+    def test_full_outer_join(self, sr_client):
+        result = sr_client.query(
+            """\
+SELECT COALESCE(a.id, b.id) AS id
+FROM (SELECT 1 AS id) AS a
+FULL OUTER JOIN (SELECT 2 AS id) AS b
+ON a.id = b.id
+ORDER BY id
+"""
+        )
+
+        assert result["id"].tolist() == [1, 2]
+
     def test_create_table_and_query(self, sr_client):
         from metricflow.dataflow.sql_table import SqlTable
         from metricflow.object_utils import random_id
@@ -230,8 +310,13 @@ class TestStarRocksLiveDatabase:
     def test_validate_configs_with_starrocks(self, sr_client):
         attrs = sr_client.sql_engine_attributes
         assert attrs.sql_engine_type == SqlEngine.STARROCKS
-        assert attrs.date_trunc_supported is False
-        assert attrs.full_outer_joins_supported is False
+        assert attrs.date_trunc_supported is True
+        assert attrs.full_outer_joins_supported is True
+        assert attrs.timestamp_type_name == "DATETIME"
+        assert attrs.continuous_percentile_aggregation_supported is True
+        assert attrs.discrete_percentile_aggregation_supported is True
+        assert attrs.approximate_continuous_percentile_aggregation_supported is True
+        assert attrs.approximate_discrete_percentile_aggregation_supported is False
         assert isinstance(attrs.sql_query_plan_renderer, StarRocksSqlQueryPlanRenderer)
 
     def test_list_tables(self, sr_client):
@@ -258,7 +343,7 @@ def _build_sr_handler_with_models(model_dir: str) -> DictConfigHandler:
     config_dict = build_config_dict_from_db_params(
         db_type="starrocks",
         host="localhost",
-        port="9030",
+        port=SR_QUERY_HOST_PORT,
         username="root",
         password="",
         database="test",

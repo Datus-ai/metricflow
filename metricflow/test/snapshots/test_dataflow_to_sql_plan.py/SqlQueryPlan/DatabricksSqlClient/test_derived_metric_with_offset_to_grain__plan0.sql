@@ -160,7 +160,11 @@ FROM (
       -- Date Spine
       SELECT
         subq_11.ds AS metric_time
-      FROM ***************************.mf_time_spine subq_11
+      FROM (
+        SELECT EXPLODE(
+          SEQUENCE(TIMESTAMP '2020-01-01 00:00:00', TIMESTAMP '2020-12-31 00:00:00', INTERVAL 1 DAY)
+        ) AS ds
+      ) subq_11
     ) subq_10
     INNER JOIN (
       -- Compute Metrics via Expressions

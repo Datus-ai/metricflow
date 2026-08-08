@@ -35,7 +35,14 @@ FROM (
     SELECT
       subq_25.ds AS metric_time
       , subq_23.bookings_at_start_of_month AS bookings_at_start_of_month
-    FROM ***************************.mf_time_spine subq_25
+    FROM (
+      SELECT ds
+      FROM GENERATE_SERIES(
+        CAST('2020-01-01 00:00:00' AS TIMESTAMP),
+        CAST('2020-12-31 00:00:00' AS TIMESTAMP),
+        INTERVAL '1 day'
+      ) AS time_spine(ds)
+    ) subq_25
     INNER JOIN (
       -- Aggregate Measures
       -- Compute Metrics via Expressions

@@ -1,11 +1,13 @@
 import datetime
 import logging
+from dataclasses import replace
 from typing import List, Optional, Tuple, Sequence
 
 import jinja2
 import pytest
 from dateutil import parser
 
+from metricflow.constraints.time_constraint import TimeRangeConstraint
 from metricflow.engine.metricflow_engine import MetricFlowEngine, MetricFlowQueryRequest
 from metricflow.model.objects.elements.measure import MeasureAggregationParameters
 from metricflow.model.semantic_model import SemanticModel
@@ -215,24 +217,34 @@ def test_case(
 
     assert semantic_model
 
+    query_time_source = ConfigurableTimeSource(as_datetime("2020-12-31"))
     engine = MetricFlowEngine(
         semantic_model=semantic_model,
         sql_client=async_sql_client,
         column_association_resolver=DefaultColumnAssociationResolver(semantic_model),
-        time_source=ConfigurableTimeSource(as_datetime("2021-01-04")),
+        time_source=query_time_source,
         time_spine_source=time_spine_source,
         system_schema=mf_test_session_state.mf_system_schema,
     )
 
     check_query_helpers = CheckQueryHelpers(async_sql_client)
+    time_constraint_start = parser.parse(case.time_constraint[0]) if case.time_constraint else None
+    time_constraint_end = parser.parse(case.time_constraint[1]) if case.time_constraint else None
+    time_range_constraint = (
+        TimeRangeConstraint(start_time=time_constraint_start, end_time=time_constraint_end)
+        if time_constraint_start is not None and time_constraint_end is not None
+        else None
+    )
+    query_time_spine_source = replace(time_spine_source, time_source=query_time_source)
+    dynamic_time_spine_source = "(\n" + query_time_spine_source.make_source(time_range_constraint).select_query + "\n)"
 
     query_result = engine.query(
         MetricFlowQueryRequest.create_with_random_request_id(
             metric_names=case.metrics,
             group_by_names=case.group_bys,
             limit=case.limit,
-            time_constraint_start=parser.parse(case.time_constraint[0]) if case.time_constraint else None,
-            time_constraint_end=parser.parse(case.time_constraint[1]) if case.time_constraint else None,
+            time_constraint_start=time_constraint_start,
+            time_constraint_end=time_constraint_end,
             where_constraint=(
                 jinja2.Template(
                     case.where_constraint,
@@ -244,7 +256,7 @@ def test_case(
                     render_date_sub=check_query_helpers.render_date_sub,
                     render_date_trunc=check_query_helpers.render_date_trunc,
                     render_percentile_expr=check_query_helpers.render_percentile_expr,
-                    mf_time_spine_source=time_spine_source.spine_table.sql,
+                    dynamic_time_spine_source=dynamic_time_spine_source,
                     double_data_type_name=check_query_helpers.double_data_type_name,
                 )
                 if case.where_constraint
@@ -267,7 +279,7 @@ def test_case(
             render_date_sub=check_query_helpers.render_date_sub,
             render_date_trunc=check_query_helpers.render_date_trunc,
             render_percentile_expr=check_query_helpers.render_percentile_expr,
-            mf_time_spine_source=time_spine_source.spine_table.sql,
+            dynamic_time_spine_source=dynamic_time_spine_source,
             double_data_type_name=check_query_helpers.double_data_type_name,
         )
     )

@@ -694,7 +694,7 @@ integration_test:
       SELECT
         c.ds AS metric_time
         , d.bookings_2_weeks_ago AS bookings_2_weeks_ago
-      FROM {{ mf_time_spine_source }} c
+      FROM {{ dynamic_time_spine_source }} c
       INNER JOIN (
         SELECT
           ds AS metric_time
@@ -703,7 +703,7 @@ integration_test:
         GROUP BY
           metric_time
       ) d
-      ON {{ render_date_sub("C", "ds", 14, TimeGranularity.DAY) }} = d.metric_time
+      ON {{ render_date_sub("c", "ds", 14, TimeGranularity.DAY) }} = d.metric_time
     ) b
     ON a.metric_time = b.metric_time
 ---
@@ -729,7 +729,7 @@ integration_test:
       SELECT
         c.ds AS metric_time
         , d.bookings_at_start_of_month AS bookings_at_start_of_month
-      FROM {{ mf_time_spine_source }} c
+      FROM {{ dynamic_time_spine_source }} c
       INNER JOIN (
         SELECT
           ds AS metric_time
@@ -756,7 +756,7 @@ integration_test:
       SELECT
         g.ds AS metric_time
         , f.bookings AS bookings_1_month_ago
-      FROM {{ mf_time_spine_source }} g
+      FROM {{ dynamic_time_spine_source }} g
       INNER JOIN (
         SELECT
           ds AS metric_time
@@ -771,7 +771,7 @@ integration_test:
       SELECT
         c.ds AS metric_time
         , d.bookings AS month_start_bookings
-      FROM {{ mf_time_spine_source }} c
+      FROM {{ dynamic_time_spine_source }} c
       INNER JOIN (
         SELECT
           ds AS metric_time
@@ -794,7 +794,7 @@ integration_test:
     SELECT
       a.ds AS metric_time
       , b.bookings_5_day_lag
-    FROM {{ mf_time_spine_source }} a
+    FROM {{ dynamic_time_spine_source }} a
     INNER JOIN (
       SELECT
         ds AS metric_time

@@ -35,7 +35,11 @@ FROM (
     SELECT
       subq_25.ds AS metric_time
       , subq_23.bookings_2_weeks_ago AS bookings_2_weeks_ago
-    FROM ***************************.mf_time_spine subq_25
+    FROM (
+      SELECT EXPLODE(
+        SEQUENCE(TIMESTAMP '2020-01-01 00:00:00', TIMESTAMP '2020-12-31 00:00:00', INTERVAL 1 DAY)
+      ) AS ds
+    ) subq_25
     INNER JOIN (
       -- Aggregate Measures
       -- Compute Metrics via Expressions

@@ -29,7 +29,7 @@ from metricflow.model.semantic_model import SemanticModel
 from metricflow.plan_conversion.column_resolver import DefaultColumnAssociationResolver
 from metricflow.plan_conversion.dataflow_to_sql import DataflowToSqlQueryPlanConverter
 from metricflow.plan_conversion.time_spine import TimeSpineSource
-from metricflow.protocols.sql_client import SqlClient
+from metricflow.protocols.sql_client import SqlClient, SqlEngine
 from metricflow.references import TimeDimensionReference, IdentifierReference
 from metricflow.specs import (
     DimensionSpec,
@@ -130,7 +130,6 @@ def convert_and_check(
         sql_query_plan=sql_query_plan,
         sql_client=sql_client,
     )
-
     # Generate plans with optimizers
     sql_query_plan = dataflow_to_sql_converter.convert_to_sql_query_plan(
         sql_engine_attributes=sql_client.sql_engine_attributes,
@@ -151,6 +150,13 @@ def convert_and_check(
         sql_query_plan=sql_query_plan,
         sql_client=sql_client,
     )
+
+
+def skip_if_dynamic_time_spine_is_unsupported(sql_client: SqlClient) -> None:
+    """Skip plan snapshots for engines that intentionally reject dynamic time-spine queries."""
+
+    if sql_client.sql_engine_attributes.sql_engine_type is SqlEngine.REDSHIFT:
+        pytest.skip("Redshift has no read-only dynamic time-spine implementation")
 
 
 def test_source_node(  # noqa: D
@@ -549,6 +555,7 @@ def test_join_to_time_spine_node_without_offset(  # noqa: D
     sql_client: SqlClient,
 ) -> None:
     """Tests JoinToTimeSpineNode for a single metric with offset_window."""
+    skip_if_dynamic_time_spine_is_unsupported(sql_client)
     measure_spec = MeasureSpec(element_name="booking_value")
     identifier_spec = LinklessIdentifierSpec.from_element_name(element_name="listing")
     metric_input_measure_specs = (MetricInputMeasureSpec(measure_spec=measure_spec),)
@@ -612,6 +619,7 @@ def test_join_to_time_spine_node_with_offset_window(  # noqa: D
     sql_client: SqlClient,
 ) -> None:
     """Tests JoinToTimeSpineNode for a single metric with offset_window."""
+    skip_if_dynamic_time_spine_is_unsupported(sql_client)
     measure_spec = MeasureSpec(element_name="booking_value")
     identifier_spec = LinklessIdentifierSpec.from_element_name(element_name="listing")
     metric_input_measure_specs = (MetricInputMeasureSpec(measure_spec=measure_spec),)
@@ -677,6 +685,7 @@ def test_join_to_time_spine_node_with_offset_to_grain(
     sql_client: SqlClient,
 ) -> None:
     """Tests JoinToTimeSpineNode for a single metric with offset_to_grain."""
+    skip_if_dynamic_time_spine_is_unsupported(sql_client)
     measure_spec = MeasureSpec(element_name="booking_value")
     identifier_spec = LinklessIdentifierSpec.from_element_name(element_name="listing")
     metric_input_measure_specs = (MetricInputMeasureSpec(measure_spec=measure_spec),)
@@ -1791,6 +1800,7 @@ def test_derived_metric_with_offset_window(  # noqa: D
     dataflow_to_sql_converter: DataflowToSqlQueryPlanConverter[DataSourceDataSet],
     sql_client: SqlClient,
 ) -> None:
+    skip_if_dynamic_time_spine_is_unsupported(sql_client)
     dataflow_plan = dataflow_plan_builder.build_plan(
         MetricFlowQuerySpec(
             metric_specs=(MetricSpec(element_name="bookings_growth_2_weeks"),),
@@ -1814,6 +1824,7 @@ def test_derived_metric_with_offset_to_grain(  # noqa: D
     dataflow_to_sql_converter: DataflowToSqlQueryPlanConverter[DataSourceDataSet],
     sql_client: SqlClient,
 ) -> None:
+    skip_if_dynamic_time_spine_is_unsupported(sql_client)
     dataflow_plan = dataflow_plan_builder.build_plan(
         MetricFlowQuerySpec(
             metric_specs=(MetricSpec(element_name="bookings_growth_since_start_of_month"),),
@@ -1837,6 +1848,7 @@ def test_derived_metric_with_offset_window_and_offset_to_grain(  # noqa: D
     dataflow_to_sql_converter: DataflowToSqlQueryPlanConverter[DataSourceDataSet],
     sql_client: SqlClient,
 ) -> None:
+    skip_if_dynamic_time_spine_is_unsupported(sql_client)
     dataflow_plan = dataflow_plan_builder.build_plan(
         MetricFlowQuerySpec(
             metric_specs=(MetricSpec(element_name="bookings_month_start_compared_to_1_month_prior"),),
@@ -1860,6 +1872,7 @@ def test_derived_metric_with_one_input_metric(  # noqa: D
     dataflow_to_sql_converter: DataflowToSqlQueryPlanConverter[DataSourceDataSet],
     sql_client: SqlClient,
 ) -> None:
+    skip_if_dynamic_time_spine_is_unsupported(sql_client)
     dataflow_plan = dataflow_plan_builder.build_plan(
         MetricFlowQuerySpec(
             metric_specs=(MetricSpec(element_name="bookings_5_day_lag"),),

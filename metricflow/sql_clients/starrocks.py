@@ -27,8 +27,8 @@ class StarRocksEngineAttributes:
 
     # SQL Engine capabilities
     supported_isolation_levels: ClassVar[Sequence[SqlIsolationLevel]] = ()
-    date_trunc_supported: ClassVar[bool] = False
-    full_outer_joins_supported: ClassVar[bool] = False
+    date_trunc_supported: ClassVar[bool] = True
+    full_outer_joins_supported: ClassVar[bool] = True
     indexes_supported: ClassVar[bool] = True
     multi_threading_supported: ClassVar[bool] = True
     timestamp_type_supported: ClassVar[bool] = True
@@ -36,12 +36,12 @@ class StarRocksEngineAttributes:
     cancel_submitted_queries_supported: ClassVar[bool] = True
     continuous_percentile_aggregation_supported: ClassVar[bool] = True
     discrete_percentile_aggregation_supported: ClassVar[bool] = True
-    approximate_continuous_percentile_aggregation_supported: ClassVar[bool] = False
+    approximate_continuous_percentile_aggregation_supported: ClassVar[bool] = True
     approximate_discrete_percentile_aggregation_supported: ClassVar[bool] = False
 
     # SQL Dialect replacement strings
     double_data_type_name: ClassVar[str] = "DOUBLE"
-    timestamp_type_name: ClassVar[Optional[str]] = "TIMESTAMP"
+    timestamp_type_name: ClassVar[Optional[str]] = "DATETIME"
     random_function_name: ClassVar[str] = "RAND"
 
     # MetricFlow attributes
@@ -185,6 +185,10 @@ class StarRocksSqlClient(SqlAlchemySqlClient):
     def create_schema(self, schema_name: str) -> None:  # noqa: D
         escaped_name = schema_name.replace("`", "``")
         self.execute(f"CREATE DATABASE IF NOT EXISTS `{escaped_name}`")
+
+    def drop_schema(self, schema_name: str, cascade: bool = True) -> None:  # noqa: D
+        escaped_name = schema_name.replace("`", "``")
+        self.execute(f"DROP DATABASE IF EXISTS `{escaped_name}`")
 
     def cancel_submitted_queries(self) -> None:  # noqa: D
         for request_id in self.active_requests():

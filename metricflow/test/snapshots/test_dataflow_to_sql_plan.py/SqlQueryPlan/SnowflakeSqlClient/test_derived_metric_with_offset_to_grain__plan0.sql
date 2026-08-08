@@ -160,7 +160,10 @@ FROM (
       -- Date Spine
       SELECT
         subq_11.ds AS metric_time
-      FROM ***************************.mf_time_spine subq_11
+      FROM (
+        SELECT DATEADD(day, ROW_NUMBER() OVER (ORDER BY SEQ4()) - 1, TO_TIMESTAMP_NTZ('2020-01-01 00:00:00')) AS ds
+        FROM TABLE(GENERATOR(ROWCOUNT => 366))
+      ) subq_11
     ) subq_10
     INNER JOIN (
       -- Compute Metrics via Expressions

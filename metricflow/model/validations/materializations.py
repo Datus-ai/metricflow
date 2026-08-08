@@ -25,6 +25,7 @@ from metricflow.model.validations.validator_helpers import (
 from metricflow.naming.linkable_spec_name import StructuredLinkableSpecName
 from metricflow.plan_conversion.column_resolver import DefaultColumnAssociationResolver
 from metricflow.plan_conversion.time_spine import TimeSpineSource
+from metricflow.protocols.sql_client import SqlEngine
 from metricflow.query.query_parser import MetricFlowQueryParser
 
 logger = logging.getLogger(__name__)
@@ -130,8 +131,8 @@ class ValidMaterializationRule(ModelValidationRule):
             data_set = converter.create_sql_source_data_set(data_source)
             source_data_sets.append(data_set)
 
-        # Any schema will work since we're just using it to render the output.
-        time_spine_source = TimeSpineSource(schema_name="dummy_schema")
+        # Materialization validation only needs time-spine metadata and does not execute the source query.
+        time_spine_source = TimeSpineSource(sql_engine=SqlEngine.DUCKDB)
         node_output_resolver = DataflowPlanNodeOutputDataSetResolver[DataSourceDataSet](
             column_association_resolver=DefaultColumnAssociationResolver(semantic_model),
             semantic_model=semantic_model,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional, List, Sequence
 
 import pandas as pd
@@ -39,7 +39,7 @@ from metricflow.object_utils import pformat_big_objects, random_id
 from metricflow.plan_conversion.column_resolver import DefaultColumnAssociationResolver
 from metricflow.plan_conversion.dataflow_to_execution import DataflowToExecutionPlanConverter
 from metricflow.plan_conversion.dataflow_to_sql import DataflowToSqlQueryPlanConverter
-from metricflow.plan_conversion.time_spine import TimeSpineSource, TimeSpineTableBuilder
+from metricflow.plan_conversion.time_spine import TimeSpineSource
 from metricflow.protocols.async_sql_client import AsyncSqlClient
 from metricflow.query.query_parser import MetricFlowQueryParser
 from metricflow.references import DimensionReference, MetricReference
@@ -337,9 +337,13 @@ class MetricFlowEngine(AbstractMetricFlowEngine):
             DefaultColumnAssociationResolver(semantic_model)
         )
         self._time_source = time_source
-        self._time_spine_source = time_spine_source or TimeSpineSource(schema_name=system_schema)
-        self._time_spine_table_builder = TimeSpineTableBuilder(
-            time_spine_source=self._time_spine_source, sql_client=self._sql_client
+        self._time_spine_source = (
+            replace(time_spine_source, time_source=self._time_source)
+            if time_spine_source is not None
+            else TimeSpineSource(
+                sql_engine=self._sql_client.sql_engine_attributes.sql_engine_type,
+                time_source=self._time_source,
+            )
         )
 
         self._schema = system_schema
@@ -439,20 +443,29 @@ class MetricFlowEngine(AbstractMetricFlowEngine):
         if self._semantic_model.metric_semantics.contains_cumulative_or_time_offset_metric(
             tuple(m.as_reference for m in query_spec.metric_specs)
         ):
-            self._time_spine_table_builder.create_if_necessary()
+            time_constraint_start = mf_query_request.time_constraint_start
+            time_constraint_end = mf_query_request.time_constraint_end
             time_constraint_updated = False
-            if not mf_query_request.time_constraint_start:
-                time_constraint_start = self._time_source.get_time() - datetime.timedelta(days=365)
+            if time_constraint_start is None and time_constraint_end is None:
                 logger.warning(
-                    "A start time has not be supplied while querying for cumulative metrics. To avoid an excessive "
-                    f"number of rows, the start time will be changed to {time_constraint_start.isoformat()}"
+                    "No time range was supplied for a cumulative or time-offset metric. The output time spine will "
+                    "be limited to the most recent 365 days."
                 )
-                time_constraint_updated = True
-            if not mf_query_request.time_constraint_end:
+            elif not mf_query_request.time_constraint_end:
                 time_constraint_end = self._time_source.get_time()
                 logger.warning(
-                    "A end time has not be supplied while querying for cumulative metrics. To avoid an excessive "
-                    f"number of rows, the end time will be changed to {time_constraint_end.isoformat()}"
+                    "An end time has not been supplied while querying for a cumulative or time-offset metric. "
+                    f"To avoid an excessive number of rows, the end time will be changed to "
+                    f"{time_constraint_end.isoformat()}"
+                )
+                time_constraint_updated = True
+            elif not mf_query_request.time_constraint_start:
+                assert time_constraint_end is not None
+                time_constraint_start = time_constraint_end - datetime.timedelta(days=365)
+                logger.warning(
+                    "A start time has not been supplied while querying for a cumulative or time-offset metric. "
+                    f"To avoid an excessive number of rows, the start time will be changed to "
+                    f"{time_constraint_start.isoformat()}"
                 )
                 time_constraint_updated = True
             if time_constraint_updated:
@@ -460,8 +473,8 @@ class MetricFlowEngine(AbstractMetricFlowEngine):
                     metric_names=mf_query_request.metric_names,
                     group_by_names=mf_query_request.group_by_names,
                     limit=mf_query_request.limit,
-                    time_constraint_start=mf_query_request.time_constraint_start,
-                    time_constraint_end=mf_query_request.time_constraint_end,
+                    time_constraint_start=time_constraint_start,
+                    time_constraint_end=time_constraint_end,
                     where_constraint_str=mf_query_request.where_constraint,
                     order=mf_query_request.order_by_names,
                 )

@@ -7,7 +7,14 @@ FROM (
   SELECT
     subq_14.ds AS metric_time
     , subq_12.bookings_5_days_ago AS bookings_5_days_ago
-  FROM ***************************.mf_time_spine subq_14
+  FROM (
+    SELECT ds
+    FROM GENERATE_SERIES(
+      CAST('2020-01-01 00:00:00' AS TIMESTAMP),
+      CAST('2020-12-31 00:00:00' AS TIMESTAMP),
+      INTERVAL '1 day'
+    ) AS time_spine(ds)
+  ) subq_14
   INNER JOIN (
     -- Aggregate Measures
     -- Compute Metrics via Expressions

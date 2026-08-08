@@ -6,10 +6,11 @@ from metricflow.dataflow.builder.costing import DefaultCostFunction
 from metricflow.dataflow.builder.dataflow_plan_builder import DataflowPlanBuilder
 from metricflow.dataset.data_source_adapter import DataSourceDataSet
 from metricflow.model.semantic_model import SemanticModel
-from metricflow.plan_conversion.time_spine import TimeSpineSource, TimeSpineTableBuilder
+from metricflow.plan_conversion.time_spine import TimeSpineSource
 from metricflow.protocols.sql_client import SqlClient
 from metricflow.test.fixtures.model_fixtures import ConsistentIdObjectRepository
-from metricflow.test.fixtures.setup_fixtures import MetricFlowTestSessionState
+from metricflow.test.test_utils import as_datetime
+from metricflow.test.time.configurable_time_source import ConfigurableTimeSource
 from metricflow.test.fixtures.sql_client_fixtures import sql_client  # noqa: F401, F403
 
 """
@@ -80,10 +81,8 @@ def scd_dataflow_plan_builder(  # noqa: D
 
 
 @pytest.fixture(scope="session")
-def time_spine_source(  # noqa: D
-    sql_client: SqlClient, mf_test_session_state: MetricFlowTestSessionState  # noqa: F811
-) -> TimeSpineSource:
-    time_spine_source = TimeSpineSource(schema_name=mf_test_session_state.mf_system_schema)
-    time_spine_table_builder = TimeSpineTableBuilder(time_spine_source=time_spine_source, sql_client=sql_client)
-    time_spine_table_builder.create_if_necessary()
-    return time_spine_source
+def time_spine_source(sql_client: SqlClient) -> TimeSpineSource:  # noqa: D, F811
+    return TimeSpineSource(
+        sql_engine=sql_client.sql_engine_attributes.sql_engine_type,
+        time_source=ConfigurableTimeSource(as_datetime("2020-12-31")),
+    )
